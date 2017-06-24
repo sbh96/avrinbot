@@ -1,1316 +1,6141 @@
 package.path = package.path..';.luarocks/share/lua/5.2/?.lua;.luarocks/share/lua/5.2/?/init.lua'
 package.cpath = package.cpath..';.luarocks/lib/lua/5.2/?.so'
 
-local URL = require "socket.url"
-local https = require "ssl.https"
-local serpent = require "serpent"
-local json = (loadfile "JSON.lua")()
-local token = '364959406:AAGiO8KTV0EjA2YqjZ4OqVbXjfp-7ByKVj0'  --[[Enter tokn here]]
-local url = 'https://api.telegram.org/bot' .. token
-local offset = 0
-local SUDO = 194279067   --[[Enter your id here]]
-local redis = require('redis')
-local redis = redis.connect('127.0.0.1', 6379)
-function is_mod(chat,user)
-	sudo = {194279067,241619708,000000000,000000000}  --[[Enter your id and cli bot id here]]
- local var = false
-  for v,_user in pairs(sudo) do
-    if _user == user then
-      var = true
-    end
-  end
- local hash = redis:sismember(SUDO..'owners:'..chat,user)
- if hash then
- var = true
- end
- local hash2 = redis:sismember(SUDO..'mods:'..chat,user)
- if hash2 then
- var = true
- end
- return var
- end
-local function getUpdates()
-  local response = {}
-  local success, code, headers, status  = https.request{
-    url = url .. '/getUpdates?timeout=20&limit=1&offset=' .. offset,
-    method = "POST",
-    sink = ltn12.sink.table(response),
-  }
-
-  local body = table.concat(response or {"no response"})
-  if (success == 1) then
-    return json:decode(body)
-  else
-    return nil, "Request Error"
-  end
-end
-
-function vardump(value)
-  print(serpent.block(value, {comment=false}))
-end
-
-function sendmsg(chat,text,keyboard)
-if keyboard then
-urlk = url .. '/sendMessage?chat_id=' ..chat.. '&text='..URL.escape(text)..'&parse_mode=html&reply_markup='..URL.escape(json:encode(keyboard))
-else
-urlk = url .. '/sendMessage?chat_id=' ..chat.. '&text=' ..URL.escape(text)..'&parse_mode=html'
-end
-https.request(urlk)
-end
- function edit( message_id, text, keyboard)
-  local urlk = url .. '/editMessageText?&inline_message_id='..message_id..'&text=' .. URL.escape(text)
-    urlk = urlk .. '&parse_mode=Markdown'
-  if keyboard then
-    urlk = urlk..'&reply_markup='..URL.escape(json:encode(keyboard))
-  end
-    return https.request(urlk)
-  end
-function Canswer(callback_query_id, text, show_alert)
-	local urlk = url .. '/answerCallbackQuery?callback_query_id=' .. callback_query_id .. '&text=' .. URL.escape(text)
-	if show_alert then
-		urlk = urlk..'&show_alert=true'
-	end
-  https.request(urlk)
-	end
-  function answer(inline_query_id, query_id , title , description , text , keyboard)
-  local results = {{}}
-         results[1].id = query_id
-         results[1].type = 'article'
-         results[1].description = description
-         results[1].title = title
-         results[1].message_text = text
-  urlk = url .. '/answerInlineQuery?inline_query_id=' .. inline_query_id ..'&results=' .. URL.escape(json:encode(results))..'&parse_mode=Markdown&cache_time=' .. 1
-  if keyboard then
-   results[1].reply_markup = keyboard
-  urlk = url .. '/answerInlineQuery?inline_query_id=' .. inline_query_id ..'&results=' .. URL.escape(json:encode(results))..'&parse_mode=Markdown&cache_time=' .. 1
-  end
-    https.request(urlk)
-  end
-function settings(chat,value) 
-local hash = SUDO..'settings:'..chat..':'..value
-  if value == 'file' then
-      text = 'فیلتر فایل'
-   elseif value == 'keyboard' then
-    text = 'فیلتردرون خطی(کیبرد شیشه ای)'
-  elseif value == 'link' then
-    text = 'قفل ارسال لینک(تبلیغات)'
-  elseif value == 'game' then
-    text = 'فیلتر انجام بازی های(inline)'
-    elseif value == 'username' then
-    text = 'قفل ارسال یوزرنیم(@)'
-   elseif value == 'pin' then
-    text = 'قفل پین کردن(پیام)'
-    elseif value == 'photo' then
-    text = 'فیلتر تصاویر'
-    elseif value == 'gif' then
-    text = 'فیلتر تصاویر متحرک'
-    elseif value == 'video' then
-    text = 'فیلتر ویدئو'
-    elseif value == 'audio' then
-    text = 'فیلتر صدا(audio-voice)'
-    elseif value == 'music' then
-    text = 'فیلتر آهنگ(MP3)'
-    elseif value == 'text' then
-    text = 'فیلتر متن'
-    elseif value == 'sticker' then
-    text = 'قفل ارسال برچسب'
-    elseif value == 'contact' then
-    text = 'فیلتر مخاطبین'
-    elseif value == 'forward' then
-    text = 'فیلتر فوروارد'
-    elseif value == 'persian' then
-    text = 'فیلتر گفتمان(فارسی)'
-    elseif value == 'english' then
-    text = 'فیلتر گفتمان(انگلیسی)'
-    elseif value == 'bot' then
-    text = 'قفل ورود ربات(API)'
-    elseif value == 'tgservice' then
-    text = 'فیلتر پیغام ورود،خروج افراد'
-	elseif value == 'groupadds' then
-    text = 'تبلیغات'
-    end
-		if not text then
-		return ''
-		end
-	if redis:get(hash) then
-  redis:del(hash)
-return text..'  غیرفعال شد.'
-		else 
-		redis:set(hash,true)
-return text..'  فعال شد.'
-end
-    end
-function fwd(chat_id, from_chat_id, message_id)
-  local urlk = url.. '/forwardMessage?chat_id=' .. chat_id .. '&from_chat_id=' .. from_chat_id .. '&message_id=' .. message_id
-  local res, code, desc = https.request(urlk)
-  if not res and code then --if the request failed and a code is returned (not 403 and 429)
-  end
-  return res, code
-end
-function sleep(n) 
-os.execute("sleep " .. tonumber(n)) 
-end
-local day = 86400
-local function run()
-  while true do
-    local updates = getUpdates()
-    vardump(updates)
-    if(updates) then
-      if (updates.result) then
-        for i=1, #updates.result do
-          local msg = updates.result[i]
-          offset = msg.update_id + 1
-          if msg.inline_query then
-            local q = msg.inline_query
-		if q.from.id == 357138613 or q.from.id == 194279067 then
-		--[[Enter       cli bot id       and        your id   ]]
-            if q.query:match('%d+') then
-              local chat = '-'..q.query:match('%d+')
-							local function is_lock(chat,value)
-local hash = SUDO..'settings:'..chat..':'..value
- if redis:get(hash) then
-    return true 
-    else
-    return false
-    end
-  end
-              local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                 {text = 'تنظیمات گروه', callback_data = 'groupsettings:'..chat} --,{text = 'واحد فروش', callback_data = 'aboute:'..chat}
-                },{
-				 {text = 'پشتیبانی ربات اورین ', callback_data = 'supportbot:'..chat},{text = 'تبلیغات شما', callback_data = 'youradds:'..chat}
-				  },{
-				 {text = 'اطلاعات گروه', callback_data = 'groupinfo:'..chat},{text = ' راهنمای ربات ', callback_data = 'helpbot:'..chat}
-				}
-							}
-            answer(q.id,'settings','Group settings',chat,'به بخش اصلی ربات هوشمند اورین خوش آمدید.\nاز منوی زیر انتخاب کنید:',keyboard)
-            end
-            end
-						end
-          if msg.callback_query then
-            local q = msg.callback_query
-						local chat = ('-'..q.data:match('(%d+)') or '')
-						if is_mod(chat,q.from.id) then
-             if q.data:match('_') and not (q.data:match('next_page') or q.data:match('left_page')) then
-                Canswer(q.id,">برای مشاهده راهنمای بیشتر این بخش عبارت\n/help\nرا ارسال کنید\n>تیم پشتیبانی:[@@vrin_spambot]\n>کانال پشتیبانی:[@avrin_team]\n>کانال اخبار و آموزش:[@yenial_admin]",true)
-					elseif q.data:match('lock') then
-							local lock = q.data:match('lock (.*)')
-							TIME_MAX = (redis:get(SUDO..'floodtime'..chat) or 3)
-              MSG_MAX = (redis:get(SUDO..'floodmax'..chat) or 5)
-							local result = settings(chat,lock)
-							if lock == 'photo' or lock == 'audio' or lock == 'video' or lock == 'gif' or lock == 'music' or lock == 'file' or lock == 'link' or lock == 'sticker' or lock == 'text' or lock == 'pin' or lock == 'username' or lock == 'hashtag' or lock == 'contact' then
-							q.data = 'left_page:'..chat
-							elseif lock == 'muteall' then
-								if redis:get(SUDO..'muteall'..chat) then
-								redis:del(SUDO..'muteall'..chat)
-									result = "فیلتر تمامی گفتگو ها غیرفعال گردید."
-								else
-								redis:set(SUDO..'muteall'..chat,true)
-									result = "فیلتر تمامی گفتگو ها فعال گردید!"
-							end
-						 q.data = 'next_page:'..chat
-							elseif lock == 'spam' then
-							local hash = redis:get(SUDO..'settings:flood'..chat)
-						if hash then
-            if redis:get(SUDO..'settings:flood'..chat) == 'kick' then
-         			spam_status = 'مسدود سازی(کاربر)'
-							redis:set(SUDO..'settings:flood'..chat,'ban')
-              elseif redis:get(SUDO..'settings:flood'..chat) == 'ban' then
-              spam_status = 'سکوت(کاربر)'
-							redis:set(SUDO..'settings:flood'..chat,'mute')
-              elseif redis:get(SUDO..'settings:flood'..chat) == 'mute' then
-              spam_status = '🔓'
-							redis:del(SUDO..'settings:flood'..chat)
-              end
-          else
-          spam_status = 'اخراج سازی(کاربر)'
-					redis:set(SUDO..'settings:flood'..chat,'kick')
-          end
-								result = 'عملکرد قفل ارسال هرزنامه : '..spam_status
-								q.data = 'next_page:'..chat
-								elseif lock == 'MSGMAXup' then
-								if tonumber(MSG_MAX) == 40 then
-									Canswer(q.id,'حداکثر عدد انتخابی برای این قابلیت [40] میباشد!',true)
-									else
-								MSG_MAX = tonumber(MSG_MAX) + 1
-								redis:set(SUDO..'floodmax'..chat,MSG_MAX)
-								q.data = 'next_page:'..chat
-							  result = MSG_MAX
-								end
-								elseif lock == 'MSGMAXdown' then
-								if tonumber(MSG_MAX) == 2 then
-									Canswer(q.id,'حداقل عدد انتخابی مجاز  برای این قابلیت [2] میباشد!',true)
-									else
-								MSG_MAX = tonumber(MSG_MAX) - 1
-								redis:set(SUDO..'floodmax'..chat,MSG_MAX)
-								q.data = 'next_page:'..chat
-								result = MSG_MAX
-							end
-								elseif lock == 'TIMEMAXup' then
-								if tonumber(TIME_MAX) == 5 then
-								Canswer(q.id,'حداکثر عدد انتخابی برای این قابلیت [5] میباشد!',true)
-									else
-								TIME_MAX = tonumber(TIME_MAX) + 1
-								redis:set(SUDO..'floodtime'..chat,TIME_MAX)
-								q.data = 'next_page:'..chat
-								result = TIME_MAX
-									end
-								elseif lock == 'TIMEMAXdown' then
-								if tonumber(TIME_MAX) == 2 then
-									Canswer(q.id,'حداقل عدد انتخابی مجاز  برای این قابلیت [2] میباشد!',true)
-									else
-								TIME_MAX = tonumber(TIME_MAX) - 1
-								redis:set(SUDO..'floodtime'..chat,TIME_MAX)
-								q.data = 'next_page:'..chat
-								result = TIME_MAX
-									end
-								elseif lock == 'welcome' then
-								local h = redis:get(SUDO..'status:welcome:'..chat)
-								if h == 'disable' or not h then
-								redis:set(SUDO..'status:welcome:'..chat,'enable')
-         result = 'ارسال پیام خوش آمدگویی فعال گردید.'
-								q.data = 'next_page:'..chat
-          else
-          redis:set(SUDO..'status:welcome:'..chat,'disable')
-          result = 'ارسال پیام خوش آمدگویی غیرفعال گردید!'
-								q.data = 'next_page:'..chat
-									end
-								else
-								q.data = 'next_page:'..chat
-								end
-							Canswer(q.id,result)
-							end
-							-------------------------------------------------------------------------
-							if q.data:match('firstmenu') then
-							local chat = '-'..q.data:match('(%d+)$')
-							local function is_lock(chat,value)
-local hash = SUDO..'settings:'..chat..':'..value
- if redis:get(hash) then
-    return true 
-    else
-    return false
-    end
-  end
-              local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                 {text = 'تنظیمات گروه', callback_data = 'groupsettings:'..chat} --,{text = 'واحد فروش', callback_data = 'aboute:'..chat}
-                },{
-				 {text = 'پشتیبانی ربات اورین ', callback_data = 'supportbot:'..chat},{text = 'تبلیغات شما', callback_data = 'youradds:'..chat}
-				  },{
-				 {text = 'اطلاعات گروه', callback_data = 'groupinfo:'..chat},{text = 'راهنما-help', callback_data = 'helpbot:'..chat}
-				}
-							}
-            edit(q.inline_message_id,'`به بخش اصلی  ربات هوشمند اورین خوش آمدید.`\n`از منوی زیر انتخاب کنید:`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('supportbot') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                  {text = 'تیم فنی', callback_data = 'teamfani:'..chat},{text = 'واحد فروش', callback_data = 'fahedsale:'..chat}
-                },{
-				 {text = 'گزارش مشکل', callback_data = 'reportproblem:'..chat},{text = 'انتقادات و پیشنهادات', callback_data = 'enteqadvapishnehad:'..chat}
-				 },{
-				 {text = 'سوالات متداول', callback_data = 'soalatmotadavel:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'به بخش پشتیبانی خوش آمدید.\nاز منوی زیر انتخاب کنید:',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('teamfani') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'supportbot:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`به بخش ارتباط با بخش فنی خوش آمدید.`\n`در صورت وجود مشکل در ربات به ما پیغام ارسال کنید:`\n[ارسال پیغام](https://telegram.me/yenial_admin)',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('reportproblem') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'supportbot:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`به بخش گزارش مشکل خوش آمدید.`\n`در صورت وجود مشکل در کارکرد سرویس شما به ما اطلاع دهید:`\n[گزارش مشکل](https://telegram.me/yenial_admin)',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('fahedsale') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-								{text = 'تمدید سرویس انتخابی', callback_data = 'tamdidservice:'..chat},{text = 'درخواست ربات به صورت رایگان', callback_data = 'salegroup:'..chat}
-
-                },{
-				{text = 'گزارشات مالی', callback_data = 'reportmony:'..chat}
-
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'supportbot:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`به بخش درخواست گروه،تمدید سرویس،گزارش مالی خوش آمدید.`\n`از منوی زیر انتخاب کنید:`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('tamdidservice') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'fahedsale:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`طرح انتخابی [شما دائمی/مادام العمر(نامحدود روز)] میباشد و نیاز به تمدید طرح ندارید!`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('reportmony') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'fahedsale:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`با عرض پوزش، متاسفانه این سیستم تا اطلاع ثانوی غیرفعال میباشد.`',keyboard)
-            end
-			------------------------------------------------------------------------
-							if q.data:match('enteqadvapishnehad') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'supportbot:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`به بخش انتقادات و پیشنهادات خوش آمدید.`\n`هرگونه انتقاد،پیشنهاد را با در میان بگذارید:`\n[ارسال انتقاد،پیشنهاد](https://telegram.me/yenial_admin)',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('soalatmotadavel') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'supportbot:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`با عرض پوزش، متاسفانه این سیستم تا اطلاع ثانوی غیرفعال میباشد.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('youradds') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`جهت ثبت و درخواست تبلیغات به سازنده ربات به آیدی @yenial_admin مراجعه کنید.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							--[[if q.data:match('groupinfo') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'با عرض پوزش، متاسفانه این سیستم تا اطلاع ثانوی غیرفعال میباشد.',keyboard)
-            end]]
-							------------------------------------------------------------------------
-							if q.data:match('helpbot') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                  {text = 'راهنمای فارسی', callback_data = 'helptext:'..chat}
-                },{
-				 {text = 'english help', callback_data = 'enhelp:'..chat},{text = 'راهنمای تصویری', callback_data = 'videohelp:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`به بخش راهنمای ربات هوشمند اورین خوش آمدید.`\n`از منوی زیر انتخاب کنید:`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('helptext') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'صفحه بعد', callback_data = 'twohelp:'..chat},{text = 'صفحه قبلی', callback_data = 'helpbot:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'>[بخش راهنمای فارسی ربات هوشمند اورین)](https://telegram.me/avrin_team)\n🔃راهنمای قفل اسپم و فلود ربات :\n\nقفل اسپم از ارسال پیام های بلند و طولانی جلوگیری میکند !\nحساسیت آن قابل تنظیم است و واحد آن کاراکتر ( حرف ) میباشد !\nدستور تنظیم آن به طور زیر میباشد :\n|تنظیم اسپم [ 40 - به بالا ]|\n➖➖\nمثلا شما میخواهید پیام های طولانی تر از 80 حرف پاک بشوند باید از دسور |تنظیم اسپم 80| استفاده نمایید !\nقفل فلود از ارسال چندین پیام پشت سر هم جلوگیری میکند !\n➖➖\nحساسیت و وضعیت آن قابل تنظیم است !\nوضعیت آن 2 حالت میباشد !\n⬅️ حالت اول : \nاگر کسی شروع به ارسال پیام پشت سر هم بکند ، تمامی پیام های او پاک خواهد شد و تا 5 ثانیه نمیتواند پیامی ارسال کند !\nدستور فعال سازی این وضعیت :\n|وضعیت فلود حذف پیام|\n➖➖\n⬅️ حالت دوم : \nاگر کسی شروع به ارسال پیام پشت سر هم بکند ، تمامی پیام های او پاک خواهد شد و از گروه هم ریموو خواهد شد !\n|وضعیت فلود اخراج|\n➖➖\n⬅️حساسیت آن هم به حد پیام تکراری قابل تنظیم است !\n|تنظیم فلود [ 1 - به بالا ]|\n\n🔃 راهنمای قفل های اصلی  ربات هوشمند اورین :\n⬅️ قفل اسپم :\nفعال سازی :\n|قفل اسپم|\nغیرفعال سازی :\n|بازکردن اسپم|\n➖➖\n⬅️ قفل لینک :\nفعال سازی :\n|قفل لینک|\nغیرفعال سازی :\n|بازکردن لینک|\n➖➖\n️⬅️ قفل آدرس اینترنتی :\nفعال سازی :\n|قفل صفحات اینترنتی|\nغیرفعال سازی :\n|بازکردن صفحات اینترنتی|\n➖➖\n⬅️ قفل تگ :\nفعال سازی :\n|قفل تگ|\nغیرفعال سازی :\n|بازکردن تگ|\n➖➖\n️⬅️ قفل هشتگ :\nفعال سازی :\n|قفل هشتگ|\nغیرفعال سازی :\n|بازکردن هشتگ|\n➖➖\n⬅️ قفل فروارد :\nفعال سازی :\n|قفل فوروارد|\nغیرفعال سازی :\n|بازکردن فوروارد|\n➖➖\n⬅️ قفل ورود ربات :\nفعال سازی :\n|قفل ربات ها|\nغیرفعال سازی :\n|بازکردن ربات ها|\n➖➖\n️⬅️ قفل ویرایش پیام :\nفعال سازی :\n|قفل ویرایش پیام|\nغیرفعال سازی :\n|بازکردن ویرایش پیام|\n➖➖\n️⬅️ قفل مدل نشانه گذاری :\nفعال سازی :\n|قفل مدل نشانه گذاری|\nغیرفعال سازی :\n|بازکردن مدل نشانه گذاری|\n➖➖\n️⬅️ قفل سنجاق پیام :\nفعال سازی :\n|قفل سنجاق پیام|\nغیرفعال سازی :\n|بازکردن سنجاق پیام|\n➖➖\n⬅️ قفل دکمه شیشه ایی :\nفعال سازی :\n|قفل دکمه شیشه ایی|\nغیرفعال سازی :\n|یازکردن دکمه شیشه ای|\n➖➖\n⬅️ قفل نوشتار فارسی :\nفعال سازی :\n|قفل فارسی|\nغیرفعال سازی :\n|بازکردن فارسی|\n➖➖\n⬅️ قفل نوشتار انگلیسی :\nفعال سازی :\n|قفل انگلیسی|\nغیرفعال سازی :\n|بازکردن انگلیسی|\n➖➖\n️⬅️ قفل سرویس تلگرام :\nفعال سازی :\n|قفل سرویس تلگرام|\nغیرفعال سازی :\n|بازکردن سرویس تلگرام|\n➖➖\n⬅️ قفل فلود :\nفعال سازی :\n|قفل فلود|\nغیرفعال سازی :\n|بازکردن فلود|\n⬅️ حساسیت فلود :\n|تنظیم فلود [ 2 - به بالا ]|\n➖➖\n️⬅️ حساسیت اسپم :\n|تنظیم اسپم [ 40 - به بالا ]|\n\n🔃راهنمای قفل های رسانه :\n\n⬅️ قفل متن [ چت ] :\nفعال سازی :\n|قفل متن|\nغیرفعال سازی :\n|بازکردن متن|\n➖➖\n⬅️ قفل عکس :\nفعال سازی :\n|قفل عکس|\nغیرفعال سازی :\n|بازکردن عکس|\n➖➖\n⬅️ قفل فیلم :\nفعال سازی :\n|قفل فیلم|\nغیرفعال سازی :\n|بازکردن فیلم|\n➖➖\n⬅️ قفل گیف :\nفعال سازی :\n|قفل گیف|\nغیرفعال سازی :\n|بازکردن گیف|\n➖➖\n⬅️ قفل موزیک :\nفعال سازی :\n|قفل موزیک|\nغیرفعال سازی :\n|بازکردن موزیک|\n➖➖\n⬅️ قفل ویس :\nفعال سازی :\n|قفل ویس|\nغیرفعال سازی :\n|بازکردن ویس|\n➖➖\n قفل فایل :\nفعال سازی :\n|قفل فایل|\nغیرفعال سازی :\n|بازکردن فایل|\n➖➖\n⬅️ قفل استیکر :\nفعال سازی :\n|قفل استیکر|\nغیرفعال سازی :\n|بازکردن استیکر|\n➖➖\n⬅️ قفل ارسال مخاطب :\nفعال سازی :\n|قفل مخاطب|\nغیرفعال سازی :\n|بازکردن مخاطب|\n➖➖\n️⬅️ قفل موقعیت مکانی :\nفعال سازی :\n|قفل موقعیت مکانی|\nغیرفعال سازی :\n|بازکردن موقعیت مکانی|\n\n',keyboard)
-            end
-							
-							------------------------------------------------------------------------
-							if q.data:match('twohelp') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'helptext:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'🔃راهنمای مدیران برای ارتقا یا عزل مقام یک کاربر :\n\n روش اول : \nروی یکی از پیام های کاربر مورد نظر ریپلای کنید و دستور |ارتقا مقام| را ارسال کنید !\n➖➖\n⬅️ روش دوم : \nدستور |ارتقا مقام| را بنویسید و جلوی دستور آیدی عددی فرق مورد نظر را بنویسید !\nمثال :\n|ارتقا مقام 123456789|\n➖➖\n⬅️ روش سوم :\nدستور |ارتقا مقام| را بنویسید و جلوی آن یوزرنیم کاربر مورد نظر را بنویسید !\nمثال :\n|ارتقا مقام @Userid|\n➖➖\n⬅️ برای عزل مقام یک نفر کافیست مراحل بالا را تنها با تفاوت اینکه به جای دستور |ارتقا مقام| دستور |عزل مقام| را جایگزین کنید.\nمثال :\n|عزل مقام @Userid|\n➖➖\n⬅️ ممنوعیت های ربات: \n برای فیلتر کردن و بان کی مون یک کلمه \n⬅️ ممنوع کردن کلمه یا حروف: فیلتر [کلمه] \n⬅️ حذف کلمه از ممنوعیت: حذف فیلتر [کلمه] \n⬅️ دستور کلمات ممنوع :|لیست فیلتر| \n ➖➖\n⬅️ زبان ربات : \n برای تغییر ساعت تابستانی بازگشت زبان \n⬅️ دستور انگلیسی کردن: |تنظیم زبان| EN \n⬅️ دستورفارسی کردن: |تنظیم زبان| FA \n ➖➖\n ⬅️  حذف پیام بصورت کلی: \n برای حذف پیام ها بصورت کلی \n⬅️ دستور حذف پیام : |حذف| [1 - 99] \n\n🔃راهنمای تنظیم و دریافت لینک گروه :\n\n⬅️ ابتدا دستور |تنظیم لینک| را وارد کنید !\n➖➖\n⬅️ سپس لینک گروه را داخل خود گروه ارسال کنید تا ثبت شود !\n➖➖\n⬅️ پس از ثبت شدن میتوانید با دستور |لینک| آن را هر زمان که خواستید دریافت کنید !\n\n🔃راهنمای وضعیت های ربات :\n➖➖\n⬅️حالت سختگیرانه \nحالتی است که اگر فعال باشد ، کسی که لینک ارسال کند را از گروه ریموو میکند !\nفعال سازی :\n|قفل حالت سختگیرانه|\nغیرفعال سازی :\n|بازکردن حالت سختگیرانه|\n➖➖\n⬅️حالت قفل کلی گروه : \nحالتی است که از ارسال هر گونه پیام توسط کاربران عادی جلوگیری میکند !\nفعال سازی :\n|قفل همه|\nغیرفعال سازی :\n|بازکردن همه|\n\nبرای فعال سازی به صورت زمان دار میتوانید به شکل زیر عمل کنید :\nفعال سازی برای مدت یک ساعت :\n|قفل گروه 1|\nفعال سازی به مدت دو ساعت :\n|قفل گروه 2|\nو الی آخر ...\n➖➖\n⬅️ حالت عدم جواب : \nبعضی از دستورات همگانی هستند ، یعنی به کاربر عادی هم پاسخ داده میشود ، اگر این حالت فعال باشد به آنها پاسخ نخواهد داد !\nفعال سازی :\n|قفل حالت عدم جواب|\nغیرفعال سازی:\n|بازکردن حالت عدم جواب|\n\n🔃 راهنمای امکانات جانبی ربات هوشمند اورین :\n\nبرای دریافت مشخصات خود میتوانید از دستور id استفاده کنید !\n➖➖\nاگر میخواهید ربات مشخصات شما را همراه با عکس پروفایل شما ارسال کند ، دستور |وضعیت دریافت آیدی photo را ارسال کنید ! برای بازگشت به حالت ساده دستور ||وضعیت دریافت آیدی simple را ارسال نمایید !\n➖➖\nدستور |اطلاعات من| برای دریافت شناسه عددی و مقام شما میباشد !\n➖➖\nبرای دریافت شناسه عددی یک فرد میتوانید از 2 روش استفاده کنید.\n⬅️ روش اول : \nریپلای کردن یک پیام فرد مورد نظر و ارسال دستور |آیدی|\n➖➖\n⬅️ روش دوم :\nنوشتن دستور |آیدی| و جلوی آن گذاشتن یوزرنیم فرد مورد نظر\nمثال :\n|آیدی| @Userid\n➖➖\nبرای دریافت عکس های پروفایل خود میتوانید از دستور زیر استفاده کنید.\n|عکس پروفایلم [ 1 - 10 ]|\nمثال : \nعکس پروفایلم 2\n➖➖\nبرای سنجاق کردن یک پیام توسط ربات میتوانید پیام مورد نظر را ریپلای کنید سپس دستور |سنجاق کن| را ارسال کنید.\nبرای خارج کردن پیام از حالت سنجاق میتوانید از دستور |حذف سنجاق| استفاده کنید.\nبرای مجدد سنجاق کردن پیام سابق میتوانید از دستور |سنجاق مجدد| استفاده نمایید.\n➖➖\n⬅️ لیست های لغو کردن :\n برای پاک کردن لیست از عنوان ها:\n ⬅️ دستور شروع نمایش لیست لغو: پاک کردن\n = رباتها / banlist / modlist / filterlist / mutelist (*) (*.)\n➖➖\nبرای این دستورات پیش نمایش نیاز نیست❗️\n\n\n➖➖➖➖➖\n  ➖➖➖\n    ➖➖➖➖➖\n      ➖➖➖\n        ➖\n        `با افتخار توسعه داده شده توسط تیم اورین`\n        کانال ما : @avrin_tram',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('videohelp') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'helpbot:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'>[فیلم های آموزشی ما در آپارات](https://aparat.com/avrin_team)\n\n*فیلم های آموزشی ما را در کانال آپارات دنبال کنید*\nhttps://aparat.com/avrin_team',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('enhelp') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'helpbot:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'>[avrin smart bot english help](https://telegram.me/avrin_team)\ntg Avrin General Options\n\n➡️ Group Enable Settings :\nTo Lock General Options \n➡️ Command : Lock (.*)\n(.*) = Spam/Links/Webpage/Tag/Hashtag/Fwd/Bots/Edit/Markdown/Mention/Pin/Inline/Farsi/English/Tgservice/Flood\n➡️ Example : Lock Links\n➖➖\n➡️ Group Disable Settings :\nTo Unlock General Options \n➡️ Command : Unlock (.*)\n(.*) = Spam/Links/Webpage/Tag/Hashtag/Fwd/Bots/Edit/Markdown/Mention/Pin/Inline/Farsi/English/Tgservice/Flood\n➡️ Example : Unlock Links\n\nflood settings \n\n🔃Bot Flood & Spam :\n\n➡️ Set Spam Char :\nSet A Number For Spam Check And Then More Than That Number Of Word Char Has Been Delete\n➡️ Command : Setspam [More Than 40]\n➡️ Example : Setspam 60\n➖➖\n➡️ Flood Status :\nSet Flood Status To Kick Or Del User Or Just Msg\n1 - Command : Setstatus del\n|To Del Msg|\n2 - Command : Setstatus kick\n|To Kick User|\n➖➖\n➡️ Flood Check Time :\nSet A Time That Bot Check Flooding\n➡️ Command : Setflood [1 Or More]\n➡️ Example : Setflood 5\n\n🔃Bot Media Options:\n\n➡️ Group Enable Settings For Media :\nTo Lock Media Options \n➡️ Command : Lock (.)\n(.) = Text/Photo/Video/Gif/Music/Voice/File/Sticker/Contact/Location\n➡️ Example : Lock photo\n➖➖\n➡️ Group Disable Settings For Media :\nTo Unlock Media Options \n➡️ Command : Unlock (.)\n(.) = Text/Photo/Video/Gif/Music/Voice/File/Sticker/Contact/Location\n➡️ Example : Unlock photo\n\n\n🔃Set Gpinfo Options:\n\n➡️ Set Group Information\nUse These Simple Commands To Set Link Rules and ...\n➡️ Command : Setlink\n➡️ Command : Link\n➡️ Command : Setrules\n➡️ Command : Rules\n➡️ Command : Note (Msg)\n➡️ Command : Getnote\n➡️ Command : Setphoto\n➡️ Command : Expire\n➡️ Command : Del (Num)\n➡️ Command : Welcome on\n➡️ Command : Welcome Off\n➡️ Command : Set welcome (Text)\n➡️ Command : Del welcome\n➡️ Command : Get welcome\n\nBot Conditions :\n➡️ Strict :\nThe Condition That The Wrongdoer User Has Been Remove From GP.\nEnable : Lock strict\nDisable : Unlock strict\n➖➖\n➡️ Group Lock All :\nThe Condition That Any Body Cant Chat And This is Like Mute all\nEnable : Lock all\nDisable : Unlock all\n➖➖\n➡️ No Answer To Users :\nThe Bot Does Not Answer To User Commands\nEnable : Lock cmd\nDisable : Unlock cmd\n➖➖\n➡️ Group Lock Time :\nSet Timer For Unlock Group Chat and ...\nCommand : Lock gtime [Time]\nExample : Lock gtime 2\nFor 2Hours\n\n🔃Avrin Lateral Options :\n\n➡️ Group /User Info  :\nTo Get Group/User Information \n➡️ Command : id\n➡️ Command : me\n➡️ Command : id @userid\n➖➖\n➡️ User Profile :\nTo Get User Profile Photos \n➡️ Command : Getpro [1 - 10]\n➡️ Example : Getpro 3\n➖➖\n➡️ Group Notify :\nTo Pin Or Unpin Or Repin a Msg By Bot\n➡️ Command : Pin\n➡️ Command : Unpin\n➡️ Command : Repin\n➖➖\n➡️ Online Status :\nTo See Bot Status\n➡️ Command : Ping\n➖➖\n➡️ Filtering :\nTo Filter And Ban A Word\n➡️ Command : Filter [Word]\n➡️ Command : Unfilter [Word]\n➡️ Command : Filterlist\n➖➖\n➡️ Bot Lang :\nTo Change Bot Return Language\n➡️ Command : Setlang en\n➡️ Command : Setlang fa\n➖➖\n➡️ Del Msgs :\nTo Remove Msgs\n➡️ Command : Del [1 - 99]\n\n➖➖➖➖➖\n  ➖➖➖\n    ➖➖➖➖➖\n      ➖➖➖\n        ➖\n         `با افتخار توسعه داده شده توسط تیم اورین`\n        کانال ما : @avrin_team',keyboard)
-            end
-							------------------------------------------------------------------------
-							------------------------------------------------------------------------
-							if q.data:match('groupinfo') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                  {text = ' لیست مالکین گروه', callback_data = 'ownerlist:'..chat},{text = 'لیست مدیران', callback_data = 'managerlist:'..chat}
-                },{
-				 {text = 'مشاهده قوانین', callback_data = 'showrules:'..chat},{text = 'لینک ابرگروه', callback_data = 'linkgroup:'..chat}
-				 },{
-				 {text = 'کاربران مسدود شده', callback_data = 'banlist:'..chat},{text = 'کلمات فیلتر شده', callback_data = 'filterlistword:'..chat}
-				  },{
-				 {text = 'کاربران حالت سکوت', callback_data = 'silentlistusers:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`به بخش اطلاعات گروه خوش آمدید.`\n`از منوی زیر انتخاب کنید:`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('managerlist') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						   local list = redis:smembers(SUDO..'mods:'..chat)
-          local t = '`>لیست مدیران گروه:` \n\n'
-          for k,v in pairs(list) do
-          t = t..k.." - *"..v.."*\n" 
-          end
-          t = t..'\n`>برای مشاهده کاربر از دستور زیر استفاده کنید`\n*/whois* `[آیدی کاربر]`'
-          if #list == 0 then
-          t = '`>مدیریت برای این گروه ثبت نشده است.`'
-          end
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'مشاهده مدیران', callback_data = 'showmanagers:'..chat},{text = 'حذف لیست مدیران', callback_data = 'removemanagers:'..chat}
-				   },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'groupinfo:'..chat}
-				}
-							}
-              edit(q.inline_message_id, ''..t..'',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('showmanagers') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'managerlist:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`با عرض پوزش،در حال حاضر سیستم انتخابی غیرفعال میباشد.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							------------------------------------------------------------------------
-							if q.data:match('ownerlist') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						   local list = redis:smembers(SUDO..'owners:'..chat)
-          local t = '`>لیست مالکین گروه:` \n\n'
-          for k,v in pairs(list) do
-          t = t..k.." - *"..v.."*\n" 
-          end
-          t = t..'\n`>برای مشاهده کاربر از دستور زیر استفاده کنید`\n*/whois* `[آیدی کاربر]`'
-          if #list == 0 then
-          t = '`>لیست مالکان گروه خالی میباشد!`'
-          end
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'مشاهده مالکین', callback_data = 'showowners:'..chat},{text = 'حذف لیست مالکین', callback_data = 'removeowners:'..chat}
-				   },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'groupinfo:'..chat}
-				}
-							}
-              edit(q.inline_message_id, ''..t..'',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('showowners') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'ownerlist:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`با عرض پوزش،در حال حاضر سیستم انتخابی غیرفعال میباشد.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('showrules') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						   local rules = redis:get(SUDO..'grouprules'..chat)
-          if not rules then
-          rules = '`>قوانین برای گروه تنظیم نشده است.`'
-          end
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-							{text = 'حذف قوانین', callback_data = 'removerules:'..chat}
-				   },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'groupinfo:'..chat}
-				}
-							}
-              edit(q.inline_message_id, 'قوانین گروه:\n `'..rules..'`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('linkgroup') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						   local links = redis:get(SUDO..'grouplink'..chat) 
-          if not links then
-          links = '`>لینک ورود به گروه تنظیم نشده است.`\n`ثبت لینک جدید با دستور زیر امکان پذیر است:`\n*/setlink* `link`'
-          end
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-								{text = 'حذف لینک ابرگروه', callback_data = 'removegrouplink:'..chat}
-				   },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'groupinfo:'..chat}
-				}
-							}
-              edit(q.inline_message_id, '`لینک ورود به ابرگروه:`\n '..links..'',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('banlist') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						  local list = redis:smembers(SUDO..'banned'..chat)
-          local t = '`>لیست افراد مسدود شده از گروه:` \n\n'
-          for k,v in pairs(list) do
-          t = t..k.." - *"..v.."*\n" 
-          end
-          t = t..'\n`>برای مشاهده کاربر از دستور زیر استفاده کنید`\n*/whois* `[آیدی کاربر]`'
-          if #list == 0 then
-          t = '`>لیست افراد مسدود شده از گروه خالی میباشد.`'
-          end
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'مشاهده کاربران', callback_data = 'showusers:'..chat},{text = 'حذف لیست', callback_data = 'removebanlist:'..chat}
-				   },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'groupinfo:'..chat}
-				}
-							}
-              edit(q.inline_message_id, ''..t..'',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('showusers') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'banlist:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`با عرض پوزش،در حال حاضر سیستم انتخابی غیرفعال میباشد.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('silentlistusers') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						  local list = redis:smembers(SUDO..'mutes'..chat)
-          local t = '`>لیست کاربران حالت سکوت` \n\n'
-          for k,v in pairs(list) do
-          t = t..k.." - *"..v.."*\n" 
-          end
-          t = t..'\n`>برای مشاهده کاربر از دستور زیر استفاده کنید`\n*/whois* `[آیدی کاربر]`'
-          if #list == 0 then
-          t = '`>لیست کاربران حالت سکوت خالی میباشد!`'
-          end
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'مشاهده کاربران', callback_data = 'showusersmutelist:'..chat},{text = 'حذف لیست', callback_data = 'removesilentlist:'..chat}
-				   },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'groupinfo:'..chat}
-				}
-							}
-              edit(q.inline_message_id, ''..t..'',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('showusersmutelist') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'silentlistusers:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`با عرض پوزش،در حال حاضر سیستم انتخابی غیرفعال میباشد.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('filterlistword') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						   local list = redis:smembers(SUDO..'filters:'..chat)
-          local t = '`>لیست کلمات فیلتر شده در گروه:` \n\n'
-          for k,v in pairs(list) do
-          t = t..k.." - *"..v.."*\n" 
-          end
-          if #list == 0 then
-          t = '`>لیست کلمات فیلتر شده خالی میباشد`'
-          end
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'حذف لیست', callback_data = 'removefilterword:'..chat}
-				   },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'groupinfo:'..chat}
-				}
-							}
-              edit(q.inline_message_id, ''..t..'',keyboard)
-            end
-							--########################################################################--
-							if q.data:match('removemanagers') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-				 {text = '❌خیر', callback_data = 'bgdbdfddhdfhdyumrurmtu:'..chat},{text = '✅بله', callback_data = 'hjwebrjb53j5bjh3:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'managerlist:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'هشدار!\n`با انجام این عمل لیست مدیران گروه حذف میگردد.`\n`آیا اطمیان دارید؟`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('hjwebrjb53j5bjh3') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						   redis:del(SUDO..'mods:'..chat)
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>لیست مدیران گروه با موفقیت بازنشانی شد.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('bgdbdfddhdfhdyumrurmtu') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`درخواست شما لغو گردید.`',keyboard)
-            end
-						--########################################################################--
-						if q.data:match('removeowners') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-				 {text = '❌خیر', callback_data = 'ncxvnfhfherietjbriurti:'..chat},{text = '✅بله', callback_data = 'ewwerwerwer4334b5343:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'ownerlist:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'هشدار!\n`با انجام این عمل لیست مالکین گروه حذف میگردد.`\n`آیا اطمیان دارید؟`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('ewwerwerwer4334b5343') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						  redis:del(SUDO..'owners:'..chat)
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>لیست مالکین گروه با موفقیت بازنشانی گردید.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('ncxvnfhfherietjbriurti') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`درخواست شما لغو گردید.`',keyboard) 
-            end
-							--########################################################################--
-							if q.data:match('removerules') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-				 {text = '❌خیر', callback_data = 'as12310fklfkmgfvm:'..chat},{text = '✅بله', callback_data = '3kj5g34ky6g34uy:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'showrules:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'هشدار!\n`با انجام این عمل متن قوانین تنظیم شده گروه حذف میگردد.`\n`آیا اطمیان دارید؟`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('3kj5g34ky6g34uy') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						  redis:del(SUDO..'grouprules'..chat)
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>قوانین گروه با موفقیت بازنشانی گردید.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('as12310fklfkmgfvm') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`درخواست شما لغو گردید.`',keyboard) 
-            end
-							--########################################################################--
-							if q.data:match('removegrouplink') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						   redis:del(SUDO..'grouplink'..chat) 
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'linkgroup:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>لینک ثبت شده با موفقیت بازنشانی گردید.`',keyboard)
-            end
-							--########################################################################--
-								if q.data:match('removebanlist') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-				 {text = '❌خیر', callback_data = 'sudfewbhwebr9983243:'..chat},{text = '✅بله', callback_data = 'erwetrrefgfhfdhretre:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'banlist:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'هشدار!\n`با انجام این عمل لیست کاربران مسدود شده از گروه حذف میگردد.`\n`آیا اطمیان دارید؟`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('erwetrrefgfhfdhretre') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						  redis:del(SUDO..'banned'..chat)
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>لیست کاربران مسدود شده از گروه با موفقیت بازنشانی گردید.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('sudfewbhwebr9983243') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`درخواست شما لغو گردید.`',keyboard) 
-            end
-							--########################################################################--
-								if q.data:match('removesilentlist') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-				 {text = '❌خیر', callback_data = 'sadopqwejjbkvw90892:'..chat},{text = '✅بله', callback_data = 'ncnvdifeqrhbksdgfid47:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'silentlistusers:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'هشدار!\n`با انجام این عمل لیست کاربران حالت سکوت گروه حذف میگردد.`\n`آیا اطمیان دارید؟`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('ncnvdifeqrhbksdgfid47') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						  redis:del(SUDO..'mutes'..chat)
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>لیست افراد کاربران لیست سکوت با موفقیت حذف گردید.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('sadopqwejjbkvw90892') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`درخواست شما لغو گردید.`',keyboard) 
-            end
-							--########################################################################--
-							if q.data:match('removefilterword') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-				 {text = '❌خیر', callback_data = 'ncxvbcusxsokd9374uid:'..chat},{text = '✅بله', callback_data = 'erewigfuwebiebfjdskfbdsugf:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'filterlistword:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'هشدار!\n`با انجام این عمل لیست تمامی کلمات فیلترشده گروه حذف میگردد.`\n`آیا اطمیان دارید؟`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('erewigfuwebiebfjdskfbdsugf') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						  redis:del(SUDO..'filters:'..chat)
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>تمامی کلمات فیلتر شده با موفقیت حذف گردیدند.`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('ncxvbcusxsokd9374uid') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`درخواست شما لغو گردید.`',keyboard) 
-            end
-							--########################################################################--
-							--#####################################################################--
-							if q.data:match('salegroup') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-				 {text = 'مدیریت معمولی گروه', callback_data = 'normalmanage:'..chat}
-                },{
-				{text = 'مدیریت پیشرفته گروه', callback_data = 'promanage:'..chat}
-                },{
-				{text = 'مدیریت حرفه ای گروه', callback_data = 'herfeiimanage:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'fahedsale:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`در این بخش شما میتوانید نسبت به درخواست ربات جدید و رایگان اقدام کنید.`\n`سرویس مورد نظر خود را انتخاب کنید:`',keyboard)
-            end
-			------------------------------------------------------------------------
-							if q.data:match('normalmanage') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-								{text = 'طرح ها و تعرفه ها', callback_data = 'tarhvatarefe:'..chat},{text = 'بررسی قابلیت ها', callback_data = 'baresiqabeliyat:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'salegroup:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>سرویس انتخابی شما: [مدیریت معمولی گروه].`\n`از منوی زیر انتخاب کنید:`',keyboard) 
-            end
-							------------------------------------------------------------------------
-							if q.data:match('promanage') then
-                           local chat = '-'..q.data:match('(%d+)$')
-						  --redis:del(SUDO..'filters:'..chat)
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-								{text = 'طرح ها و تعرفه ها', callback_data = 'tarhpro:'..chat},{text = 'بررسی قابلیت ها', callback_data = 'pishrafteberesi:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'salegroup:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>سرویس انتخابی شما: [مدیریت پیشرفته گروه].`\n`از منوی زیر انتخاب کنید:`',keyboard)
-            end
-							------------------------------------------------------------------------
-							if q.data:match('herfeiimanage') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-								{text = 'طرح ها و تعرفه ها', callback_data = 'herfetarh:'..chat},{text = 'بررسی قابلیت ها', callback_data = 'qabeliyarherfeii:'..chat}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'salegroup:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`>سرویس انتخابی شما: [مدیریت حرفه ای گروه].`\n`از منوی زیر انتخاب کنید:`',keyboard) 
-            end
-							--********************************************************************--
-							if q.data:match('tarhpro') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'promanage:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`قیمت طرح های مربوط به این ربات:`\n`ماهانه(30 الی 31 روز کامل)` >  *14900*\n`سالانه(365 روز کامل)` > *34000*\n`دائمی/مادام العمر(نامحدود روز)` > *45000*\n`تمامی قیمت ها به` تومان `میباشد.`',keyboard)
-            end
-			------------@@@@@@@@@@@@@@@@@@@@@@@@@@------------------
-			if q.data:match('tarhvatarefe') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'normalmanage:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`قیمت طرح های مربوط به این ربات:`\n`ماهانه(30 الی 31 روز کامل)` >  *9900*\n`سالانه(365 روز کامل)` > *23000*\n`دائمی/مادام العمر(نامحدود روز)` > *35000*\n`تمامی قیمت ها به` تومان `میباشد.`',keyboard)
-            end
-			------------@@@@@@@@@@@@@@@@@@@@@@@@@@------------------
-			if q.data:match('herfetarh') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'herfeiimanage:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`قیمت طرح های مربوط به این ربات:`\n`ماهانه(30 الی 31 روز کامل)` >  *16900*\n`سالانه(365 روز کامل)` > *37500*\n`دائمی/مادام العمر(نامحدود روز)` > *49000*\n`تمامی قیمت ها به` تومان `میباشد.`',keyboard)
-            end
-							----------------------------------بررسی قابلیت ها--------------------------------------
-							if q.data:match('pishrafteberesi') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'promanage:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`بررسی قابلیت های این سرویس:`\nشرح قابلیت ها: (سرعت بالا در انجام دستورات و موارد تنظیم شده برای گروه خود--دقت در انجام دستورات داده شده: 100%--رابط کاربری فوق العاده و دارای قابلیت و متود های جدید تلگرام(توضیحات بیشتر در پست های بالا موجود میباشد.))',keyboard)
-            end
-							--********************************************************************--
-							if q.data:match('baresiqabeliyat') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'normalmanage:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`بررسی قابلیت های این سرویس:`\nشرح قابلیت ها: (سرعت پایین تر نسبت به ربات بالا(به دلیل زیاد شدن آمار گروه های فعال ربات--عمر ربات: 26 ماه)--دقت در انجام دستورات داده شده: 96%--رابط کاربری فوق العاده و دارای قابلیت های پیشرفته و نسبتا جدید)',keyboard)
-            end
-							--********************************************************************--
-							if q.data:match('qabeliyarherfeii') then
-                           local chat = '-'..q.data:match('(%d+)$')
-		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = 'صفحه قبلی ◀️', callback_data = 'herfeiimanage:'..chat}
-				}
-							}
-              edit(q.inline_message_id,'`بررسی قابلیت های این سرویس:`\nشرح قابلیت ها: (سرعت بالا در انجام دستورات و موارد تنظیم شده برای گروه خود--دقت در انجام دستورات داده شده: 100%--رابط کاربری فوق العاده و دارای قابلیت و متود های جدید تلگرام(توضیحات بیشتر در پست های بالا موجود + مدیریت حرفه ای(دارای پنل مدیریتی خودکار و بدون نیاز به ارسال دستور!)',keyboard)
-            end
-							--********************************************************************--
-							--********************************************************************--
-							--********************************************************************--
-							------------------------------------------------------------------------
-							if q.data:match('groupsettings') then
-							local chat = '-'..q.data:match('(%d+)$')
-							local function is_lock(chat,value)
-local hash = SUDO..'settings:'..chat..':'..value
- if redis:get(hash) then
-    return true 
-    else
-    return false
-    end
-  end
-
-local function getsettings(value)
-       if value == "شارژ" then
-       local ex = redis:ttl("charged:"..chat)
-       if ex == -1 then
-        return "نامحدود!"
-       else
-        local d = math.floor(ex / day ) + 1
-        return "نامحدود!"
-       end
-        elseif value == 'muteall' then
-				local h = redis:ttl(SUDO..'muteall'..chat)
-          if h == -1 then
-        return '🔐'
-				elseif h == -2 then
-        return '🔓'
-       else
-        return "تا ["..h.."] ثانیه دیگر فعال است"
-       end
-        elseif value == 'welcome' then
-					local hash = redis:get(SUDO..'status:welcome:'..chat)
-        if hash == 'enable' then
-         return 'فعال'
-          else
-          return 'غیرفعال'
-          end
-        elseif value == 'spam' then
-        local hash = redis:get(SUDO..'settings:flood'..chat)
-        if hash then
-            if redis:get(SUDO..'settings:flood'..chat) == 'kick' then
-         return 'اخراج(کاربر)'
-              elseif redis:get(SUDO..'settings:flood'..chat) == 'ban' then
-              return 'مسدود سازی(کاربر)'
-              elseif redis:get(SUDO..'settings:flood'..chat) == 'mute' then
-              return 'سکوت(کاربر)'
-              end
-          else
-          return '🔓'
-          end
-        elseif is_lock(chat,value) then
-          return '🔐'
-          else
-          return '🔓'
-          end
-        end
-              local keyboard = {}
-            	keyboard.inline_keyboard = {
-	            	{
-                 {text=getsettings('photo'),callback_data=chat..':lock photo'}, {text = 'فیلتر تصاویر', callback_data = chat..'_photo'}
-                },{
-                 {text=getsettings('video'),callback_data=chat..':lock video'}, {text = 'فیلتر ویدئو', callback_data = chat..'_video'}
-                },{
-                 {text=getsettings('audio'),callback_data=chat..':lock audio'}, {text = 'فیلتر صدا', callback_data = chat..'_audio'}
-                },{
-                 {text=getsettings('gif'),callback_data=chat..':lock gif'}, {text = 'فیلتر تصاویر متحرک', callback_data = chat..'_gif'}
-                },{
-                 {text=getsettings('music'),callback_data=chat..':lock music'}, {text = 'فیلتر آهنگ', callback_data = chat..'_music'}
-                },{
-                  {text=getsettings('file'),callback_data=chat..':lock file'},{text = 'فیلتر فایل', callback_data = chat..'_file'}
-                },{
-                  {text=getsettings('link'),callback_data=chat..':lock link'},{text = 'قفل ارسال لینک', callback_data = chat..'_link'}
-                },{
-                 {text=getsettings('sticker'),callback_data=chat..':lock sticker'}, {text = 'فیلتر برچسب', callback_data = chat..'_sticker'}
-                },{
-                  {text=getsettings('text'),callback_data=chat..':lock text'},{text = 'فیلتر متن', callback_data = chat..'_text'}
-                },{
-                  {text=getsettings('pin'),callback_data=chat..':lock pin'},{text = 'قفل پیغام پین شده', callback_data = chat..'_pin'}
-                },{
-                 {text=getsettings('username'),callback_data=chat..':lock username'}, {text = 'فیلتر یوزرنیم', callback_data = chat..'_username'}
-                },{
-                  {text=getsettings('contact'),callback_data=chat..':lock contact'},{text = 'فیلتر مخاطبین', callback_data = chat..'_contact'}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = '▶️ صفحه بعدی', callback_data = 'next_page:'..chat}
-                }
-							}
-            edit(q.inline_message_id,'تنظیمات-ابرگروه(فیلترها):',keyboard)
-            end
-			------------------------------------------------------------------------
-            if q.data:match('left_page') then
-							local chat = '-'..q.data:match('(%d+)$')
-							local function is_lock(chat,value)
-local hash = SUDO..'settings:'..chat..':'..value
- if redis:get(hash) then
+-------------------------
+ltn12=require("ltn12")
+json = dofile('JSON.lua')
+URL = require "socket.url"
+serpent = require("serpent")
+http = require "socket.http"
+https = require "ssl.https"
+--*********Serpent*******--
+serpent = require("serpent")
+--***********Lgi*********--
+lgi = require('lgi')
+--*********Redis*******--
+redis = require('redis')
+--*******DataBase******--
+database = Redis.connect('127.0.0.1', 6379)
+--*********Notify*******--
+notify = lgi.require('Notify')
+notify.init ("Telegram updates")
+chats = {}
+day = 86400
+--*********BOT ID*******--
+BOTS = 357138613 --[[Enter cli bot id here]]
+bot_id = 357138613 --[[Enter cli bot id here]]
+bot_owner = 194279067 --[[Enter your id here]]
+sudo_users = {194279067,357138613,328341764,241619708,000000000} --[[Enter your Id and cli bot Id here]]
+--***********************--
+-----------------------------------------------------------------------------------------------
+---------------
+-- Start Functions --
+---------------
+-----------------------------------------------------------------------------------------------
+function is_bot(msg)
+  if tonumber(BOTS) == 364959406 then  --[[Enter your api bot id here]]
     return true
     else
     return false
     end
- end
-local function getsettings(value)
-       if value == "charge" then
-       local ex = redis:ttl("charged:"..chat)
-       if ex == -1 then
-        return "نامحدود!"
-       else
-        local d = math.floor(ex / day ) + 1
-        return "نامحدود!"
-       end
-        elseif value == 'spam' then
-        local hash = redis:get(SUDO..'settings:flood'..chat)
-        if hash then
-            if redis:get(SUDO..'settings:flood'..chat) == 'kick' then
-         return 'اخراج(کاربر)'
-              elseif redis:get(SUDO..'settings:flood'..chat) == 'ban' then
-              return 'مسدود سازی(کاربر)'
-              elseif redis:get(SUDO..'settings:flood'..chat) == 'mute' then
-              return 'سکوت(کاربر)'
-              end
-          else
-          return '🔓'
-          end
-        elseif is_lock(chat,value) then
-          return '🔐'
-          else
-          return '🔓'
-          end
-        end
-							local keyboard = {}
-							keyboard.inline_keyboard = {
-									{
-                 {text=getsettings('photo'),callback_data=chat..':lock photo'}, {text = 'فیلتر تصاویر', callback_data = chat..'_photo'}
-                },{
-                 {text=getsettings('video'),callback_data=chat..':lock video'}, {text = 'فیلتر ویدئو', callback_data = chat..'_video'}
-                },{
-                 {text=getsettings('audio'),callback_data=chat..':lock audio'}, {text = 'فیلتر صدا', callback_data = chat..'_audio'}
-                },{
-                 {text=getsettings('gif'),callback_data=chat..':lock gif'}, {text = 'فیلتر تصاویر متحرک', callback_data = chat..'_gif'}
-                },{
-                 {text=getsettings('music'),callback_data=chat..':lock music'}, {text = 'فیلتر آهنگ', callback_data = chat..'_music'}
-                },{
-                  {text=getsettings('file'),callback_data=chat..':lock file'},{text = 'فیلتر فایل', callback_data = chat..'_file'}
-                },{
-                  {text=getsettings('link'),callback_data=chat..':lock link'},{text = 'قفل ارسال لینک', callback_data = chat..'_link'}
-                },{
-                 {text=getsettings('sticker'),callback_data=chat..':lock sticker'}, {text = 'فیلتر برچسب', callback_data = chat..'_sticker'}
-                },{
-                  {text=getsettings('text'),callback_data=chat..':lock text'},{text = 'فیلتر متن', callback_data = chat..'_text'}
-                },{
-                  {text=getsettings('pin'),callback_data=chat..':lock pin'},{text = 'قفل پیغام پین شده', callback_data = chat..'_pin'}
-                },{
-                 {text=getsettings('username'),callback_data=chat..':lock username'}, {text = 'فیلتر یوزرنیم', callback_data = chat..'_username'}
-                },{
-                  {text=getsettings('contact'),callback_data=chat..':lock contact'},{text = 'فیلتر مخاطبین', callback_data = chat..'_contact'}
-                },{
-                   {text = 'بازگشت به منوی اصلی ◀️', callback_data = 'firstmenu:'..chat},{text = '▶️ صفحه بعدی', callback_data = 'next_page:'..chat}
-                }
-							}
-              edit(q.inline_message_id,'تنظیمات-ابرگروه(بخش1):',keyboard)
-            end
-						if q.data:match('next_page') then
-							local chat = '-'..q.data:match('(%d+)$')
-							local function is_lock(chat,value)
-local hash = SUDO..'settings:'..chat..':'..value
- if redis:get(hash) then
-    return true 
-    else
-    return false
+  end
+-----------Bot Owner-------------
+function is_leader(msg)
+  local var = false
+  if msg.sender_user_id_ == tonumber() or msg.sender_user_id_ == tonumber(194279067) then
+    var = true
+  end
+  return var
+end
+
+function is_leaderid(user_id)
+  local var = false
+  if user_id == tonumber(bot_owner) or user_id == tonumber(194279067) then
+    var = true
+  end
+  return var
+end
+--------------Sudo----------------
+function is_sudo(msg)
+  local var = false
+  for k,v in pairs(sudo_users) do
+    if msg.sender_user_id_ == v then
+      var = true
     end
   end
-local function getsettings(value)
-        if value == "charge" then
-       local ex = redis:ttl("charged:"..chat)
-       if ex == -1 then
-        return "نامحدود!"
-       else
-        local d = math.floor(ex / day ) + 1
-        return "نامحدود!"
-       end
-        elseif value == 'muteall' then
-        local h = redis:ttl(SUDO..'muteall'..chat)
-       if h == -1 then
-        return '🔐'
-				elseif h == -2 then
-			  return '🔓'
-       else
-        return "تا ["..h.."] ثانیه دیگر فعال است"
-       end
-        elseif value == 'welcome' then
-        local hash = redis:get(SUDO..'status:welcome:'..chat)
-        if hash == 'enable' then
-         return 'فعال'
-          else
-          return 'غیرفعال'
-          end
-        elseif value == 'spam' then
-        local hash = redis:get(SUDO..'settings:flood'..chat)
-        if hash then
-            if redis:get(SUDO..'settings:flood'..chat) == 'kick' then
-         return 'اخراج(کاربر)'
-              elseif redis:get(SUDO..'settings:flood'..chat) == 'ban' then
-              return 'مسدود-سازی(کاربر)'
-              elseif redis:get(SUDO..'settings:flood'..chat) == 'mute' then
-              return 'سکوت-کاربر'
-              end
-          else
-          return '🔓'
-          end
-        elseif is_lock(chat,value) then
-          return '🔐'
-          else
-          return '🔓'
-          end
-        end
-									local MSG_MAX = (redis:get(SUDO..'floodmax'..chat) or 5)
-								local TIME_MAX = (redis:get(SUDO..'floodtime'..chat) or 3)
-         		local keyboard = {}
-							keyboard.inline_keyboard = {
-								{
-                  {text=getsettings('forward'),callback_data=chat..':lock forward'},{text = 'فیلتر فوروارد', callback_data = chat..'_forward'}
-                },{
-                  {text=getsettings('bot'),callback_data=chat..':lock bot'},{text = 'قفل ورود ربات(API)', callback_data = chat..'_bot'}
-                },{
-                  {text=getsettings('game'),callback_data=chat..':lock game'},{text = 'فیلتر بازی(inline)', callback_data = chat..'_game'}
-                },{
-                  {text=getsettings('persian'),callback_data=chat..':lock persian'},{text = 'فیلتر گفتمان فارسی', callback_data = chat..'_persian'}
-                },{
-                  {text=getsettings('english'),callback_data=chat..':lock english'},{text = 'فیلتر گفتمان انگلیسی', callback_data = chat..'_english'}
-                },{
-                  {text=getsettings('keyboard'),callback_data=chat..':lock keyboard'},{text = 'قفل دکمه شیشه ای', callback_data = chat..'_keyboard'}
-                },{
-                  {text=getsettings('tgservice'),callback_data=chat..':lock tgservice'},{text = 'فیلتر پیغام ورود،خروج', callback_data = chat..'_tgservice'}
-                },{
-                 {text=getsettings('muteall'),callback_data=chat..':lock muteall'}, {text = 'فیلتر تمامی گفتگو ها', callback_data = chat..'_muteall'}
-                },{
-                 {text=getsettings('welcome'),callback_data=chat..':lock welcome'}, {text = 'پیغام خودش آمدگویی', callback_data = chat..'_welcome'}
-                },{
-                 {text=getsettings('spam'),callback_data=chat..':lock spam'}, {text = 'عملکرد قفل ارسال هرزنامه', callback_data = chat..'_spam'}
-                },{
-                 {text = 'حداکثر زمان ارسال هرزنامه: '..tostring(TIME_MAX)..' ثانیه', callback_data = chat..'_TIME_MAX'}
-                },{
-									{text='⬇️',callback_data=chat..':lock TIMEMAXdown'},{text='⬆️',callback_data=chat..':lock TIMEMAXup'}
-									},{
-                 {text = 'حداکثر پیغام ارسال هرزنامه: '..tostring(MSG_MAX)..' پیام', callback_data = chat..'_MSG_MAX'}
-                },{
-									{text='⬇️',callback_data=chat..':lock MSGMAXdown'},{text='⬆️',callback_data=chat..':lock MSGMAXup'}
-									},{
-                  {text='تاریخ انقضاء گروه: '..getsettings('charge'),callback_data=chat..'_charge'}
-                },{
-                  {text = 'صفحه قبلی ◀️', callback_data = 'left_page:'..chat},{text = '▶️ صفحه بعدی', callback_data = 'next_pagee:'..chat}
-                }
-							}
-              edit(q.inline_message_id,'تنظیمات-ابرگروه:',keyboard)
-            end
-            else Canswer(q.id,'شما مالک/مدیر گروه نیستید و امکان تغییر تنظیمات را ندارید!\n>برای درخواست ربات به آیدی زیر مراجعه فرمایید-این ربات رایگان میباشد:\n@yenial_admin',true)
-						end
-						end
-          if msg.message and msg.message.date > (os.time() - 5) and msg.message.text then
-     end
+  if msg.sender_user_id_ == tonumber(bot_owner) or msg.sender_user_id_ == tonumber(194279067) then
+    var = true
+  end
+  return var
+end
+
+function is_sudoid(user_id)
+  local var = false
+  for k,v in pairs(sudo_users) do
+    if user_id == v then
+      var = true
+    end
+  end
+  if user_id == tonumber(bot_owner) or user_id == tonumber(194279067) then
+    var = true
+  end
+  return var
+end
+---------------Admin-----------------
+function is_admin(user_id)
+  local var = false
+  local hashsb =  'bot:admins:'
+  local admin = database:sismember(hashsb, user_id)
+  if admin then
+    var = true
+  end
+  for k,v in pairs(sudo_users) do
+    if user_id == v then
+      var = true
+    end
+  end
+  if user_id == tonumber(bot_owner) or user_id == tonumber(194279067) then
+    var = true
+  end
+  return var
+end
+---------------Owner-------------------
+function is_owner(user_id, chat_id)
+  local var = false
+  local hash =  'bot:owners:'..chat_id
+  local owner = database:sismember(hash, user_id)
+  local hashs =  'bot:admins:'
+  local admin = database:sismember(hashs, user_id)
+  if owner then
+    var = true
+  end
+  if admin then
+    var = true
+  end
+  for k,v in pairs(sudo_users) do
+    if user_id == v then
+      var = true
+    end
+  end
+  if user_id == tonumber(bot_owner) or user_id == tonumber(194279067) then
+    var = true
+  end
+  return var
+end
+------------------Mod-------------------
+function is_momod(user_id, chat_id)
+  local var = false
+  local hash =  'bot:momod:'..chat_id
+  local momod = database:sismember(hash, user_id)
+  local hashs =  'bot:admins:'
+  local admin = database:sismember(hashs, user_id)
+  local hashss =  'bot:owners:'..chat_id
+  local owner = database:sismember(hashss, user_id)
+  if momod then
+    var = true
+  end
+  if owner then
+    var = true
+  end
+  if admin then
+    var = true
+  end
+  for k,v in pairs(sudo_users) do
+    if user_id == v then
+      var = true
+    end
+  end
+  if user_id == tonumber(bot_owner) or user_id == tonumber(194279067) then
+    var = true
+  end
+  return var
+end
+--------------VIP MEMBER-----------------
+function is_vipmem(user_id, chat_id)
+  local var = false
+  local hash =  'bot:momod:'..chat_id
+  local momod = database:sismember(hash, user_id)
+  local hashs =  'bot:admins:'
+  local admin = database:sismember(hashs, user_id)
+  local hashss =  'bot:owners:'..chat_id
+  local owner = database:sismember(hashss, user_id)
+  local hashsss = 'bot:vipmem:'..chat_id
+  local vipmem = database:sismember(hashsss, user_id)
+  if vipmem then
+    var = true
+  end
+  if momod then
+    var = true
+  end
+  if owner then
+    var = true
+  end
+  if admin then
+    var = true
+  end
+  for k,v in pairs(sudo_users) do
+    if user_id == v then
+      var = true
+    end
+  end
+  if user_id == tonumber(bot_owner) or user_id == tonumber(194279067) then
+    var = true
+  end
+  return var
+end
+-------------------FreeWords--------------------
+local function is_free(msg, value)
+  local var = false
+  local hash = 'bot:freewords:'..msg.chat_id_
+  if hash then
+    local names = database:hkeys(hash)
+    local text = ''
+    local value = value:gsub('-','')
+    for i=1, #names do
+      if string.match(value:lower(), names[i]:lower()) then
+        var = true
       end
     end
   end
+  return var
+end
+-------------------Banned---------------------
+local function is_banned(user_id, chat_id)
+  local var = false
+  local hash = 'bot:banned:'..chat_id
+  local banned = database:sismember(hash, user_id)
+  if banned then
+    var = true
+  end
+  return var
+end
+------------------Muted----------------------
+local function is_muted(user_id, chat_id)
+  local var = false
+  local hash = 'bot:muted:'..chat_id
+  local banned = database:sismember(hash, user_id)
+  if banned then
+    var = true
+  end
+  return var
+end
+------------------Gbaned--------------------
+function is_gbanned(user_id)
+  local var = false
+  local hash = 'bot:gban:'
+  local gbanned = database:sismember(hash, user_id)
+  if gbanned then
+    var = true
+  end
+  return var
+end
+--------------------------------------------------
+function delete_msg(chatid ,mid)
+  tdcli_function ({
+    ID = "DeleteMessages",
+    chat_id_ = chatid,
+    message_ids_ = mid
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function resolve_username(username,cb)
+  tdcli_function ({
+    ID = "SearchPublicChat",
+    username_ = username
+  }, cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function changeChatMemberStatus(chat_id, user_id, status)
+  tdcli_function ({
+    ID = "ChangeChatMemberStatus",
+    chat_id_ = chat_id,
+    user_id_ = user_id,
+    status_ = {
+      ID = "ChatMemberStatus" .. status
+    },
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function getInputFile(file)
+  if file:match('/') then
+    infile = {ID = "InputFileLocal", path_ = file}
+  elseif file:match('^%d+$') then
+    infile = {ID = "InputFileId", id_ = file}
+  else
+    infile = {ID = "InputFilePersistentId", persistent_id_ = file}
+  end
+
+  return infile
+end
+-----------------------------------------------------------------------------------------------
+function del_all_msgs(chat_id, user_id)
+  tdcli_function ({
+    ID = "DeleteMessagesFromUser",
+    chat_id_ = chat_id,
+    user_id_ = user_id
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function getChatId(id)
+  local chat = {}
+  local id = tostring(id)
+
+  if id:match('^-100') then
+    local channel_id = id:gsub('-100', '')
+    chat = {ID = channel_id, type = 'channel'}
+  else
+    local group_id = id:gsub('-', '')
+    chat = {ID = group_id, type = 'group'}
+  end
+
+  return chat
+end
+-----------------------------------------------------------------------------------------------
+function chat_leave(chat_id, user_id)
+  changeChatMemberStatus(chat_id, user_id, "Left")
+end
+-----------------------------------------------------------------------------------------------
+function from_username(msg)
+  function gfrom_user(extra,result,success)
+    if result.username_ then
+      F = result.username_
+    else
+      F = 'nil'
     end
+    return F
+  end
+  local username = getUser(msg.sender_user_id_,gfrom_user)
+  return username
+end
+-----------------------------------------------------------------------------------------------
+function do_notify (user, msg)
+  local n = notify.Notification.new(user, msg)
+  n:show ()
+end
+-----------------------------------------------------------------------------------------------
+function chat_kick(chat_id, user_id)
+  changeChatMemberStatus(chat_id, user_id, "Kicked")
+end
+-----------------------------------------------------------------------------------------------
+function getParseMode(parse_mode)
+  if parse_mode then
+    local mode = parse_mode:lower()
+
+    if mode == 'markdown' or mode == 'md' then
+      P = {ID = "TextParseModeMarkdown"}
+    elseif mode == 'html' then
+      P = {ID = "TextParseModeHTML"}
+    end
+  end
+  return P
+end
+-----------------------------------------------------------------------------------------------
+function getMessage(chat_id, message_id,cb)
+  tdcli_function ({
+    ID = "GetMessage",
+    chat_id_ = chat_id,
+    message_id_ = message_id
+  }, cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function sendContact(chat_id, reply_to_message_id, disable_notification, from_background, reply_markup, phone_number, first_name, last_name, user_id)
+  tdcli_function ({
+    ID = "SendMessage",
+    chat_id_ = chat_id,
+    reply_to_message_id_ = reply_to_message_id,
+    disable_notification_ = disable_notification,
+    from_background_ = from_background,
+    reply_markup_ = reply_markup,
+    input_message_content_ = {
+      ID = "InputMessageContact",
+      contact_ = {
+        ID = "Contact",
+        phone_number_ = phone_number,
+        first_name_ = first_name,
+        last_name_ = last_name,
+        user_id_ = user_id
+      },
+    },
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function sendPhoto(chat_id, reply_to_message_id, disable_notification, from_background, reply_markup, photo, caption)
+  tdcli_function ({
+    ID = "SendMessage",
+    chat_id_ = chat_id,
+    reply_to_message_id_ = reply_to_message_id,
+    disable_notification_ = disable_notification,
+    from_background_ = from_background,
+    reply_markup_ = reply_markup,
+    input_message_content_ = {
+      ID = "InputMessagePhoto",
+      photo_ = getInputFile(photo),
+      added_sticker_file_ids_ = {},
+      width_ = 0,
+      height_ = 0,
+      caption_ = caption
+    },
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function getUserFull(user_id,cb)
+  tdcli_function ({
+    ID = "GetUserFull",
+    user_id_ = user_id
+  }, cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function vardump(value)
+  print(serpent.block(value, {comment=false}))
+end
+-----------------------------------------------------------------------------------------------
+function dl_cb(arg, data)
+end
+----------------------------------------------------------------------------------------------
+function delete_msg(chatid ,mid)
+  tdcli_function ({
+    ID = "DeleteMessages",
+    chat_id_ = chatid,
+    message_ids_ = mid
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function send(chat_id, reply_to_message_id, disable_notification, text, disable_web_page_preview, parse_mode)
+  local TextParseMode = getParseMode(parse_mode)
+  tdcli_function ({
+    ID = "SendMessage",
+    chat_id_ = chat_id,
+    reply_to_message_id_ = reply_to_message_id,
+    disable_notification_ = disable_notification,
+    from_background_ = 1,
+    reply_markup_ = nil,
+    input_message_content_ = {
+      ID = "InputMessageText",
+      text_ = text,
+      disable_web_page_preview_ = disable_web_page_preview,
+      clear_draft_ = 0,
+      entities_ = {},
+      parse_mode_ = TextParseMode,
+    },
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function sendaction(chat_id, action, progress)
+  tdcli_function ({
+    ID = "SendChatAction",
+    chat_id_ = chat_id,
+    action_ = {
+      ID = "SendMessage" .. action .. "Action",
+      progress_ = progress or 100
+    }
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function changetitle(chat_id, title)
+  tdcli_function ({
+    ID = "ChangeChatTitle",
+    chat_id_ = chat_id,
+    title_ = title
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function edit(chat_id, message_id, reply_markup, text, disable_web_page_preview, parse_mode)
+  local TextParseMode = getParseMode(parse_mode)
+  tdcli_function ({
+    ID = "EditMessageText",
+    chat_id_ = chat_id,
+    message_id_ = message_id,
+    reply_markup_ = reply_markup,
+    input_message_content_ = {
+      ID = "InputMessageText",
+      text_ = text,
+      disable_web_page_preview_ = disable_web_page_preview,
+      clear_draft_ = 0,
+      entities_ = {},
+      parse_mode_ = TextParseMode,
+    },
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function setphoto(chat_id, photo)
+  tdcli_function ({
+    ID = "ChangeChatPhoto",
+    chat_id_ = chat_id,
+    photo_ = getInputFile(photo)
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function add_user(chat_id, user_id, forward_limit)
+  tdcli_function ({
+    ID = "AddChatMember",
+    chat_id_ = chat_id,
+    user_id_ = user_id,
+    forward_limit_ = forward_limit or 50
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function pinmsg(channel_id, message_id, disable_notification)
+   tdcli_function ({
+     ID = "PinChannelMessage",
+     channel_id_ = getChatId(channel_id).ID,
+     message_id_ = message_id,
+     disable_notification_ = disable_notification
+   }, dl_cb, nil)
+end
+------------------------------------------------------------------------------------------------
+function unpinmsg(channel_id)
+  tdcli_function ({
+    ID = "UnpinChannelMessage",
+    channel_id_ = getChatId(channel_id).ID
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function blockUser(user_id)
+  tdcli_function ({
+    ID = "BlockUser",
+    user_id_ = user_id
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function unblockUser(user_id)
+  tdcli_function ({
+    ID = "UnblockUser",
+    user_id_ = user_id
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function getBlockedUsers(offset, limit)
+  tdcli_function ({
+    ID = "GetBlockedUsers",
+    offset_ = offset,
+    limit_ = limit
+  }, dl_cb, nil)
+end
+------------------------------------------------------------------------------------------------
+function delmsg(arg,data)
+  for k,v in pairs(data.messages_) do
+    delete_msg(v.chat_id_,{[0] = v.id_})
+  end
+end
+-------------------------------------------------------------------------------------------------
+function chat_del_user(chat_id, user_id)
+  changeChatMemberStatus(chat_id, user_id, 'Editor')
+end
+-----------------------------------------------------------------------------------------------
+function getChannelMembers(channel_id, offset, filter, limit)
+  if not limit or limit > 200 then
+    limit = 200
+  end
+  tdcli_function ({
+    ID = "GetChannelMembers",
+    channel_id_ = getChatId(channel_id).ID,
+    filter_ = {
+      ID = "ChannelMembers" .. filter
+    },
+    offset_ = offset,
+    limit_ = limit
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function getChannelFull(channel_id)
+  tdcli_function ({
+    ID = "GetChannelFull",
+    channel_id_ = getChatId(channel_id).ID
+  }, dl_cb, nil)
+end
+-----------------------------------------------------------------------------------------------
+function channel_get_bots(channel,cb)
+  local function callback_admins(extra,result,success)
+    limit = result.member_count_
+    getChannelMembers(channel, 0, 'Bots', limit,cb)
+  end
+  getChannelFull(channel,callback_admins)
+end
+-----------------------------------------------------------------------------------------------
+function getInputMessageContent(file, filetype, caption)
+  if file:match('/') or file:match('.') then
+    infile = {ID = "InputFileLocal", path_ = file}
+  elseif file:match('^%d+$') then
+    infile = {ID = "InputFileId", id_ = file}
+  else
+    infile = {ID = "InputFilePersistentId", persistent_id_ = file}
+  end
+
+  local inmsg = {}
+  local filetype = filetype:lower()
+
+  if filetype == 'animation' then
+    inmsg = {ID = "InputMessageAnimation", animation_ = infile, caption_ = caption}
+  elseif filetype == 'audio' then
+    inmsg = {ID = "InputMessageAudio", audio_ = infile, caption_ = caption}
+  elseif filetype == 'document' then
+    inmsg = {ID = "InputMessageDocument", document_ = infile, caption_ = caption}
+  elseif filetype == 'photo' then
+    inmsg = {ID = "InputMessagePhoto", photo_ = infile, caption_ = caption}
+  elseif filetype == 'sticker' then
+    inmsg = {ID = "InputMessageSticker", sticker_ = infile, caption_ = caption}
+  elseif filetype == 'video' then
+    inmsg = {ID = "InputMessageVideo", video_ = infile, caption_ = caption}
+  elseif filetype == 'voice' then
+    inmsg = {ID = "InputMessageVoice", voice_ = infile, caption_ = caption}
+  end
+
+  return inmsg
 end
 
-return run()
+-----------------------------------------------------------------------------------------------
+function getUser(user_id, cb)
+  tdcli_function ({
+    ID = "GetUser",
+    user_id_ = user_id
+  }, cb, nil)
+end
+----------------------------------------------------------------------------------------------
+local function check_filter_words(msg, value)
+  local hash = 'bot:filters:'..msg.chat_id_
+  if hash then
+    local names = database:hkeys(hash)
+    local text = ''
+	local value = value:gsub(' ','')
+    for i=1, #names do
+      if string.match(value:lower(), names[i]:lower()) and not is_momod(msg.sender_user_id_, msg.chat_id_)then
+        local id = msg.id_
+        local msgs = {[0] = id}
+        local chat = msg.chat_id_
+        delete_msg(chat,msgs)
+      end
+    end
+  end
+end
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+function tdcli_update_callback(data)
+  -------------------------------------------
+  if (data.ID == "UpdateNewMessage") then
+    local msg = data.message_
+    --vardump(data)
+    local d = data.disable_notification_
+    local chat = chats[msg.chat_id_]
+    ----------------OLD MSG--------------------
+    if msg.date_ < (os.time() - 30) then
+      print("**** OLD MSG ****")
+      return false
+    end
+    -------* Expire & AutoLeave *-------
+    local expiretime = database:ttl("bot:charge:"..msg.chat_id_)
+    if expiretime == 0 then
+      local v = tonumber(bot_owner)
+      send(v, 0, 1, "⭕️ تاریخ تمدید این گروه فرا رسید !\n🔹لینک : "..(database:get("bot:group:link"..msg.chat_id_) or "تنظیم نشده").."\n🔸شناسه گروه :  "..msg.chat_id_..'\n🔹نام گروه : '..chat.title_..'\n\n🔹اگر میخواهید ربات گروه را ترک کند از دستور زیر استفاده کنید :\n\n🔖 leave'..msg.chat_id_..'\n\n🔸اگر قصد وارد شدن به گروه را دارید از دستور زیر استفاده کنید :\n\n🔖 join'..msg.chat_id_..'\n\n🔹اگر میخواهید ربات داخل گروه اعلام کند از دستور زیر استفاده کنید :\n\n🔖 meld'..msg.chat_id_..'\n\n🔅🔅🔅🔅🔅🔅\n\n📅 اگر قصد تمدید گروه را دارید از دستورات زیر استفاده کنید : \n\n⭕️برای شارژ به صورت یک ماه :\n🔖 plan1'..msg.chat_id_..'\n\n⭕️برای شارژ به صورت سه ماه :\n🔖 plan2'..msg.chat_id_..'\n\n⭕️برای شارژ به صورت نامحدود :\n🔖 plan3 \n\n➖➖➖➖➖➖\n➖➖➖➖➖➖\n\ntgCh >>> @tgMember \nCreator >>> `@sajjad_021`'..msg.chat_id_, 1, 'html')
+    end
+    if database:get("autoleave") == "On" then
+      if not database:get("bot:enable:"..msg.chat_id_) then
+        if not database:get("bot:autoleave:"..msg.chat_id_) then
+          database:setex("bot:autoleave:"..msg.chat_id_,1250,true)
+        end
+      end
+      local autoleavetime = tonumber(database:ttl("bot:autoleave:"..msg.chat_id_))
+      local time = 50
+      if (autoleavetime) < tonumber(time) then
+        database:set("lefting"..msg.chat_id_,true)
+      end
+      local id = tostring(msg.chat_id_)
+      if id:match("-100(%d+)") then
+        if database:get("lefting"..msg.chat_id_) then
+          if not database:get("bot:enable:"..msg.chat_id_) then
+            chat_leave(msg.chat_id_, bot_id)
+            database:del("lefting"..msg.chat_id_)
+            local v = tonumber(bot_owner)
+            send(v, 0, 1," > ⭕️ ربات از گروه با مشخصات زیر خارج شد !\n 🔹نام گروه : "..chat.title_.."\n🔸آیدی گروه : "..msg.chat_id_, 1, 'html')
+          end
+        end
+      end
+    end
+    ---------* Secretary *-----------
+    if database:get("clerk") == "On" then
+      function clerk(extra, result, success)
+        local id = tostring(msg.chat_id_)
+        if id:match("^(%d+)") then
+          if not is_admin(msg.sender_user_id_) then
+            local text = database:get("textsec")
+            if not database:get("secretary:"..msg.chat_id_) then
+              if text then
+                local text = text:gsub('FIRSTNAME',(result.first_name_ or ''))
+                local text = text:gsub('LASTNAME',(result.last_name_ or ''))
+                local text = text:gsub('USERNAME',('@'..result.username_ or ''))
+                local text = text:gsub('USERID',(result.id_ or ''))
+                send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+                database:setex("secretary:"..msg.chat_id_,86400,true)
+                return false
+              else
+                return ""
+              end
+            end
+          end
+        end
+      end
+      getUser(msg.sender_user_id_,clerk)
+    end
+    -------------------------------------------
+    local idf = tostring(msg.chat_id_)
+    if not database:get("bot:enable:"..msg.chat_id_) and not idf:match("^(%d+)") and not is_admin(msg.sender_user_id_, msg.chat_id_) then
+      print("Return False [ Not Enable ]")
+      return false
+    end
+    -------------------------------------------
+    if msg and msg.send_state_.ID == "MessageIsSuccessfullySent" then
+      function get_mymsg_contact(extra, result, success)
+      end
+      getMessage(msg.chat_id_, msg.reply_to_message_id_,get_mymsg_contact)
+      return
+    end
+    -------------------------------------------
+    database:incr("bot:allmsgs")
+    if msg.chat_id_ then
+      local id = tostring(msg.chat_id_)
+      if id:match('-100(%d+)') then
+        if not database:sismember("bot:groups",msg.chat_id_) then
+          database:sadd("bot:groups",msg.chat_id_)
+        end
+      elseif id:match('^(%d+)') then
+        if not database:sismember("bot:userss",msg.chat_id_) then
+          database:sadd("bot:userss",msg.chat_id_)
+        end
+      else
+        if not database:sismember("bot:groups",msg.chat_id_) then
+          database:sadd("bot:groups",msg.chat_id_)
+        end
+      end
+    end
+    -------------------------------------------
+    -------------* MSG TYPES *-----------------
+    if msg.content_ then
+      if msg.reply_markup_ and msg.reply_markup_.ID == "ReplyMarkupInlineKeyboard" then
+        print("This is [ Inline ]")
+        msg_type = 'MSG:Inline'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageText" then
+        text = msg.content_.text_
+        print("This is [ Text ]")
+        msg_type = 'MSG:Text'
+      end
+      -------------------------
+      if msg.content_.ID == "MessagePhoto" then
+        print("This is [ Photo ]")
+        msg_type = 'MSG:Photo'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageChatAddMembers" then
+        print("This is [ New User Add ]")
+        msg_type = 'MSG:NewUserAdd'
+      end
+      -----------------------------------
+      if msg.content_.ID == "MessageDocument" then
+        print("This is [ File Or Document ]")
+        msg_type = 'MSG:Document'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageSticker" then
+        print("This is [ Sticker ]")
+        msg_type = 'MSG:Sticker'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageAudio" then
+        print("This is [ Audio ]")
+        msg_type = 'MSG:Audio'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageVoice" then
+        print("This is [ Voice ]")
+        msg_type = 'MSG:Voice'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageVideo" then
+        print("This is [ Video ]")
+        msg_type = 'MSG:Video'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageAnimation" then
+        print("This is [ Gif ]")
+        msg_type = 'MSG:Gif'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageLocation" then
+        print("This is [ Location ]")
+        msg_type = 'MSG:Location'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageChatJoinByLink" then
+        print("This is [ Msg Join By link ]")
+        msg_type = 'MSG:NewUser'
+      end
+      -------------------------
+      if not msg.reply_markup_ and msg.via_bot_user_id_ ~= 0 then
+        print("This is [ MarkDown ]")
+        msg_type = 'MSG:MarkDown'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageChatJoinByLink" then
+        print("This is [ Msg Join By Link ]")
+        msg_type = 'MSG:JoinByLink'
+      end
+      -------------------------
+      if msg.content_.ID == "MessageContact" then
+        print("This is [ Contact ]")
+        msg_type = 'MSG:Contact'
+      end
+      -------------------------
+    end
+    -------------------------------------------
+    if ((not d) and chat) then
+      if msg.content_.ID == "MessageText" then
+        do_notify (chat.title_, msg.content_.text_)
+      else
+        do_notify (chat.title_, msg.content_.ID)
+      end
+    end
+    -----------------------------------------------------------------------------------------------
+    -- end functions --
+    -----------------------------------------------------------------------------------------------
+    -----------------------------------------------------------------------------------------------
+    ----------------------------------------Anti FLood---------------------------------------------
+    --------------Flood Max --------------
+    local flmax = 'flood:max:'..msg.chat_id_
+    if not database:get(flmax) then
+      floodMax = 5
+    else
+      floodMax = tonumber(database:get(flmax))
+    end
+    -----------------End-------------------
+    -----------------Msg-------------------
+    local pm = 'flood:'..msg.sender_user_id_..':'..msg.chat_id_..':msgs'
+    if not database:get(pm) then
+      msgs = 0
+    else
+      msgs = tonumber(database:get(pm))
+    end
+    -----------------End-------------------
+    ------------Flood Check Time-----------
+    local TIME_CHECK = 2
+    -----------------End-------------------
+    -------------Flood Check---------------
+    local hashflood = 'anti-flood:'..msg.chat_id_
+    if msgs > (floodMax - 1) then
+      if database:get('floodstatus'..msg.chat_id_) == 'Kicked' then
+        del_all_msgs(msg.chat_id_, msg.sender_user_id_)
+        chat_kick(msg.chat_id_, msg.sender_user_id_)
+      elseif database:get('floodstatus'..msg.chat_id_) == 'DelMsg' then
+        del_all_msgs(msg.chat_id_, msg.sender_user_id_)
+      else
+        del_all_msgs(msg.chat_id_, msg.sender_user_id_)
+      end
+    end
+    -----------------End-------------------
+
+    --------------ANTI ATTACK-------------
+    local pmonpv = 'antiattack:'..msg.sender_user_id_..':'..msg.chat_id_..':msgs'
+    if not database:get(pmonpv) then
+      msgsonpv = 0
+    else
+      msgsonpv = tonumber(database:get(pmonpv))
+    end
+    if msgsonpv > (13 - 1) then
+      blockUser(msg.sender_user_id_)
+    end
+    local idmem = tostring(msg.chat_id_)
+    if idmem:match("^(%d+)") then
+      database:setex(pmonpv, TIME_CHECK, msgsonpv+1)
+    end
+    -------------------------------------- Process mod --------------------------------------------
+    -----------------------------------------------------------------------------------------------
+
+    -------------------------------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------------------------------
+    -----------------------------******** START MSG CHECKS ********----------------------------------------
+    -------------------------------------------------------------------------------------------------------
+    -------------------------------------------------------------------------------------------------------
+    if is_banned(msg.sender_user_id_, msg.chat_id_) then
+      local id = msg.id_
+      local msgs = {[0] = id}
+      local chat = msg.chat_id_
+      chat_kick(msg.chat_id_, msg.sender_user_id_)
+      return
+    end
+    if is_muted(msg.sender_user_id_, msg.chat_id_) then
+      local id = msg.id_
+      local msgs = {[0] = id}
+      local chat = msg.chat_id_
+      delete_msg(chat,msgs)
+      return
+    end
+    if is_gbanned(msg.sender_user_id_) then
+      local id = msg.id_
+      local msgs = {[0] = id}
+      local chat = msg.chat_id_
+      chat_kick(msg.chat_id_, msg.sender_user_id_)
+      delete_msg(chat,msgs)
+      return
+    end
+    if database:get('bot:muteall'..msg.chat_id_) and not is_momod(msg.sender_user_id_, msg.chat_id_) then
+      local id = msg.id_
+      local msgs = {[0] = id}
+      local chat = msg.chat_id_
+      delete_msg(chat,msgs)
+      return
+    end
+    database:incr('user:msgs'..msg.chat_id_..':'..msg.sender_user_id_)
+    database:incr('group:msgs'..msg.chat_id_)
+    if msg.content_.ID == "MessagePinMessage" then
+      if database:get('pinnedmsg'..msg.chat_id_) and database:get('bot:pin:mute'..msg.chat_id_) then
+        unpinmsg(msg.chat_id_)
+        local pin_id = database:get('pinnedmsg'..msg.chat_id_)
+        pinmsg(msg.chat_id_,pin_id,0)
+      end
+    end
+    if database:get('bot:viewget'..msg.sender_user_id_) then
+      if not msg.forward_info_ then
+        if database:get('lang:gp:'..msg.chat_id_) then
+          send(msg.chat_id_, msg.id_, 1, 'Operation Error ! \n\n > Please re-submit the command and then view the number of hits to get forward more!', 1, 'md')
+        else
+          send(msg.chat_id_, msg.id_, 1, 'خطا در انجام عملیات !\n\n > لطفا دستور را مجدد ارسال کنید و سپس عمل مشاهده تعداد بازدید را با فوروارد مطلب دریافت کنید !', 1, 'md')
+        end
+        database:del('bot:viewget'..msg.sender_user_id_)
+      else
+        if database:get('lang:gp:'..msg.chat_id_) then
+          send(msg.chat_id_, msg.id_, 1, '> The more hits you : '..msg.views_..' seen', 1, 'md')
+        else
+          send(msg.chat_id_, msg.id_, 1, '> میزان بازدید پست شما : '..msg.views_..' بازدید', 1, 'md')
+        end
+        database:del('bot:viewget'..msg.sender_user_id_)
+      end
+    end
+    --Photo
+    --Photo
+    ------- --- Photo--------- Photo
+    -- -----------------Photo
+    --Photo
+    --Photo
+    if msg_type == 'MSG:Photo' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if msg.forward_info_ then
+          if database:get('bot:forward:mute'..msg.chat_id_) then
+            if msg.forward_info_.ID == "MessageForwardedFromUser" or msg.forward_info_.ID == "MessageForwardedPost" then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Fwd] [Photo]")
+            end
+          end
+        end
+        if database:get('bot:photo:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Photo]")
+        end
+        if msg.content_.caption_ then
+          check_filter_words(msg, msg.content_.caption_)
+          if database:get('bot:links:mute'..msg.chat_id_) then
+            if msg.content_.caption_:match("[Tt][Ee][Ll][Ee][Gg][Rr][Aa][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt][Ll][Gg][Rr][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt].[Mm][Ee]") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Link] [Photo]")
+              if database:get('bot:strict'..msg.chat_id_) then
+                chat_kick(msg.chat_id_, msg.sender_user_id_)
+              end
+            end
+          end
+          if database:get('tags:lock'..msg.chat_id_) then
+            if msg.content_.caption_:match("@") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Tag] [Photo]")
+            end
+          end
+          if msg.content_.caption_:match("#") then
+            if database:get('bot:hashtag:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Hashtag] [Photo]")
+            end
+          end
+          if msg.content_.caption_:match("[Hh][Tt][Tt][Pp][Ss]://") or msg.content_.caption_:match("[Hh][Tt][Tt][Pp]://") or msg.content_.caption_:match(".[Ii][Rr]") or msg.content_.caption_:match(".[Cc][Oo][Mm]") or msg.content_.caption_:match(".[Oo][Rr][Gg]") or msg.content_.caption_:match(".[Ii][Nn][Ff][Oo]") or msg.content_.caption_:match("[Ww][Ww][Ww].") or msg.content_.caption_:match(".[Tt][Kk]") or msg.content_.ID == "MessageEntityTextUrl" or msg.content_.ID == "MessageEntityUrl" then
+            if database:get('bot:webpage:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Hashtag] [Photo]")
+            end
+          end
+          if msg.content_.caption_:match("[\216-\219][\128-\191]") then
+            if database:get('bot:arabic:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Farsi] [Photo]")
+            end
+          end
+          if msg.content_.caption_:match("[A-Z]") or msg.content_.caption_:match("[a-z]") then
+            if database:get('bot:english:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [English] [Photo]")
+            end
+          end
+        end
+      end
+
+      --Markdown
+      --Markdown
+      ------- --- Markdown--------- Markdown
+      -- -----------------Markdown
+      --Markdown
+      --Markdown
+    elseif msg_type == 'MSG:MarkDown' then
+      if database:get('markdown:lock'..msg.chat_id_) then
+        if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+        end
+      end
+      --Document
+      --Document
+      ------- --- Document--------- Document
+      -- -----------------Document
+      --Document
+      --Document
+    elseif msg_type == 'MSG:Document' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if msg.forward_info_ then
+          if database:get('bot:forward:mute'..msg.chat_id_) then
+            if msg.forward_info_.ID == "MessageForwardedFromUser" or msg.forward_info_.ID == "MessageForwardedPost" then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Fwd] [Document]")
+            end
+          end
+        end
+        if database:get('bot:document:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Document]")
+        end
+        if msg.content_.caption_ then
+          check_filter_words(msg, msg.content_.caption_)
+          if database:get('bot:links:mute'..msg.chat_id_) then
+            if msg.content_.caption_:match("[Tt][Ee][Ll][Ee][Gg][Rr][Aa][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt][Ll][Gg][Rr][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt].[Mm][Ee]") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Link] [Document]")
+              if database:get('bot:strict'..msg.chat_id_) then
+                chat_kick(msg.chat_id_, msg.sender_user_id_)
+              end
+            end
+          end
+          if database:get('tags:lock'..msg.chat_id_) then
+            if msg.content_.caption_:match("@") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Tag] [Document]")
+            end
+          end
+          if msg.content_.caption_:match("#") then
+            if database:get('bot:hashtag:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Hashtag] [Document]")
+            end
+          end
+          if msg.content_.caption_:match("[Hh][Tt][Tt][Pp][Ss]://") or msg.content_.caption_:match("[Hh][Tt][Tt][Pp]://") or msg.content_.caption_:match(".[Ii][Rr]") or msg.content_.caption_:match(".[Cc][Oo][Mm]") or msg.content_.caption_:match(".[Oo][Rr][Gg]") or msg.content_.caption_:match(".[Ii][Nn][Ff][Oo]") or msg.content_.caption_:match("[Ww][Ww][Ww].") or msg.content_.caption_:match(".[Tt][Kk]") or msg.content_.ID == "MessageEntityTextUrl" or msg.content_.ID == "MessageEntityUrl" then
+            if database:get('bot:webpage:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Web] [Document]")
+            end
+          end
+          if msg.content_.caption_:match("[\216-\219][\128-\191]") then
+            if database:get('bot:arabic:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Farsi] [Document]")
+            end
+          end
+          if msg.content_.caption_:match("[A-Z]") or msg.content_.caption_:match("[a-z]") then
+            if database:get('bot:english:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [English] [Document]")
+            end
+          end
+        end
+      end
+      --Inline
+      --Inline
+      ------- --- Inline--------- Inline
+      -- -----------------Inline
+      --Inline
+      --Inline
+    elseif msg.reply_markup_ and msg.reply_markup_.ID == "ReplyMarkupInlineKeyboard" and msg.via_bot_user_id_ ~= 0 then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if database:get('bot:inline:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Inline]")
+        end
+      end
+      --Sticker
+      --Sticker
+      ------- --- Sticker--------- Sticker
+      -- -----------------Sticker
+      --Sticker
+      --Sticker
+    elseif msg_type == 'MSG:Sticker' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if database:get('bot:sticker:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Sticker]")
+        end
+      end
+    elseif msg_type == 'MSG:JoinByLink' then
+      if database:get('bot:tgservice:mute'..msg.chat_id_) then
+        local id = msg.id_
+        local msgs = {[0] = id}
+        local chat = msg.chat_id_
+        delete_msg(chat,msgs)
+        print("Deleted [Lock] [Tgservice] [JoinByLink]")
+        return
+      end
+      function get_welcome(extra,result,success)
+        if database:get('welcome:'..msg.chat_id_) then
+          text = database:get('welcome:'..msg.chat_id_)
+        else
+          if database:get('lang:gp:'..msg.chat_id_) then
+            text = 'Hi {firstname} Welcome To Group 🌹'
+          else
+            text = 'سلام {firstname} خوش اومدی 🌹'
+          end
+        end
+        local text = text:gsub('{firstname}',(result.first_name_ or ''))
+        local text = text:gsub('{lastname}',(result.last_name_ or ''))
+        local text = text:gsub('{username}',(result.username_ or ''))
+        local text = text:gsub('{gpname}',(chat.title_ or ''))
+        send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+      end
+      if database:get("bot:welcome"..msg.chat_id_) then
+        getUser(msg.sender_user_id_,get_welcome)
+      end
+      --New User Add
+      --New User Add
+      ------- --- New User Add--------- New User Add
+      -- -----------------New User Add
+      --New User Add
+      --New User Add
+    elseif msg_type == 'MSG:NewUserAdd' then
+      if database:get('bot:tgservice:mute'..msg.chat_id_) then
+        local id = msg.id_
+        local msgs = {[0] = id}
+        local chat = msg.chat_id_
+        delete_msg(chat,msgs)
+        print("Deleted [Lock] [Tgservice] [NewUserAdd]")
+        return
+      end
+      if msg.content_.members_[0].username_ and msg.content_.members_[0].username_:match("[Bb][Oo][Tt]$") then
+        if not is_momod(msg.content_.members_[0].id_, msg.chat_id_) then
+          if database:get('bot:bots:mute'..msg.chat_id_) then
+            chat_kick(msg.chat_id_, msg.content_.members_[0].id_)
+            return false
+          end
+        end
+      end
+      if is_banned(msg.content_.members_[0].id_, msg.chat_id_) then
+        chat_kick(msg.chat_id_, msg.content_.members_[0].id_)
+        return false
+      end
+      if database:get("bot:welcome"..msg.chat_id_) then
+        if database:get('welcome:'..msg.chat_id_) then
+          text = database:get('welcome:'..msg.chat_id_)
+        else
+          if database:get('lang:gp:'..msg.chat_id_) then
+            text = 'Hi Welcome To Group'
+          else
+            text = 'سلام خوش اومدی'
+          end
+        end
+        local text = text:gsub('{firstname}',(msg.content_.members_[0].first_name_ or ''))
+        local text = text:gsub('{lastname}',(msg.content_.members_[0].last_name_ or ''))
+        local text = text:gsub('{username}',('@'..msg.content_.members_[0].username_ or ''))
+        send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+      end
+      --Contact
+      --Contact
+      ------- --- Contact--------- Contact
+      -- -----------------Contact
+      --Contact
+      --Contact
+    elseif msg_type == 'MSG:Contact' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if msg.forward_info_ then
+          if database:get('bot:forward:mute'..msg.chat_id_) then
+            if msg.forward_info_.ID == "MessageForwardedFromUser" or msg.forward_info_.ID == "MessageForwardedPost" then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Fwd] [Contact]")
+            end
+          end
+        end
+        if database:get('bot:contact:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Contact]")
+        end
+      end
+      --Audio
+      --Audio
+      ------- --- Audio--------- Audio
+      -- -----------------Audio
+      --Audio
+      --Audio
+    elseif msg_type == 'MSG:Audio' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if msg.forward_info_ then
+          if database:get('bot:forward:mute'..msg.chat_id_) then
+            if msg.forward_info_.ID == "MessageForwardedFromUser" or msg.forward_info_.ID == "MessageForwardedPost" then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Fwd] [Audio]")
+            end
+          end
+        end
+        if database:get('bot:music:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Audio]")
+        end
+        if msg.content_.caption_ then
+          check_filter_words(msg, msg.content_.caption_)
+          if database:get('bot:links:mute'..msg.chat_id_) then
+            if msg.content_.caption_:match("[Tt][Ee][Ll][Ee][Gg][Rr][Aa][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt][Ll][Gg][Rr][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt].[Mm][Ee]") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Link] [Audio]")
+            end
+          end
+          if database:get('tags:lock'..msg.chat_id_) then
+            if msg.content_.caption_:match("@") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Tag] [Audio]")
+            end
+          end
+          if msg.content_.caption_:match("#") then
+            if database:get('bot:hashtag:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Hashtag] [Audio]")
+            end
+          end
+          if msg.content_.caption_:match("[Hh][Tt][Tt][Pp][Ss]://") or msg.content_.caption_:match("[Hh][Tt][Tt][Pp]://") or msg.content_.caption_:match(".[Ii][Rr]") or msg.content_.caption_:match(".[Cc][Oo][Mm]") or msg.content_.caption_:match(".[Oo][Rr][Gg]") or msg.content_.caption_:match(".[Ii][Nn][Ff][Oo]") or msg.content_.caption_:match("[Ww][Ww][Ww].") or msg.content_.caption_:match(".[Tt][Kk]") or msg.content_.ID == "MessageEntityTextUrl" or msg.content_.ID == "MessageEntityUrl" then
+            if database:get('bot:webpage:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Web] [Audio]")
+            end
+          end
+          if msg.content_.caption_:match("[\216-\219][\128-\191]") then
+            if database:get('bot:arabic:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Farsi] [Audio]")
+            end
+          end
+          if msg.content_.caption_:match("[A-Z]") or msg.content_.caption_:match("[a-z]") then
+            if database:get('bot:english:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [English] [Audio]")
+            end
+          end
+        end
+      end
+      --Voice
+      --Voice
+      ------- --- Voice--------- Voice
+      -- -----------------Voice
+      --Voice
+      --Voice
+    elseif msg_type == 'MSG:Voice' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if msg.forward_info_ then
+          if database:get('bot:forward:mute'..msg.chat_id_) then
+            if msg.forward_info_.ID == "MessageForwardedFromUser" or msg.forward_info_.ID == "MessageForwardedPost" then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Fwd] [Voice]")
+            end
+          end
+        end
+        if database:get('bot:voice:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Voice]")
+        end
+        if msg.content_.caption_ then
+          check_filter_words(msg, msg.content_.caption_)
+          if database:get('bot:links:mute'..msg.chat_id_) then
+            if msg.content_.caption_:match("[Tt][Ee][Ll][Ee][Gg][Rr][Aa][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt][Ll][Gg][Rr][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt].[Mm][Ee]") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Link] [Voice]")
+            end
+          end
+          if database:get('tags:lock'..msg.chat_id_) then
+            if msg.content_.caption_:match("@") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Tag] [Voice]")
+            end
+          end
+          if msg.content_.caption_:match("#") then
+            if database:get('bot:hashtag:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Hashtag] [Voice]")
+            end
+          end
+          if msg.content_.caption_:match("[Hh][Tt][Tt][Pp][Ss]://") or msg.content_.caption_:match("[Hh][Tt][Tt][Pp]://") or msg.content_.caption_:match(".[Ii][Rr]") or msg.content_.caption_:match(".[Cc][Oo][Mm]") or msg.content_.caption_:match(".[Oo][Rr][Gg]") or msg.content_.caption_:match(".[Ii][Nn][Ff][Oo]") or msg.content_.caption_:match("[Ww][Ww][Ww].") or msg.content_.caption_:match(".[Tt][Kk]") or msg.content_.ID == "MessageEntityTextUrl" or msg.content_.ID == "MessageEntityUrl" then
+            if database:get('bot:webpage:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Web] [Voice]")
+            end
+          end
+          if msg.content_.caption_:match("[\216-\219][\128-\191]") then
+            if database:get('bot:arabic:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Farsi] [Voice]")
+            end
+          end
+          if msg.content_.caption_:match("[A-Z]") or msg.content_.caption_:match("[a-z]") then
+            if database:get('bot:english:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [English] [Voice]")
+            end
+          end
+        end
+      end
+      --Location
+      --Location
+      ------- --- Location--------- Location
+      -- -----------------Location
+      --Location
+      --Location
+    elseif msg_type == 'MSG:Location' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if msg.forward_info_ then
+          if database:get('bot:forward:mute'..msg.chat_id_) then
+            if msg.forward_info_.ID == "MessageForwardedFromUser" or msg.forward_info_.ID == "MessageForwardedPost" then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [English] [Location]")
+            end
+          end
+        end
+        if database:get('bot:location:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Location]")
+          return
+        end
+        if msg.content_.caption_ then
+          check_filter_words(msg, msg.content_.caption_)
+          if database:get('bot:links:mute'..msg.chat_id_) then
+            if msg.content_.caption_:match("[Tt][Ee][Ll][Ee][Gg][Rr][Aa][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt][Ll][Gg][Rr][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt].[Mm][Ee]") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Link] [Location]")
+            end
+          end
+          if database:get('tags:lock'..msg.chat_id_) then
+            if msg.content_.caption_:match("@") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Tag] [Location]")
+            end
+          end
+          if msg.content_.caption_:match("#") then
+            if database:get('bot:hashtag:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Hashtag] [Location]")
+            end
+          end
+          if msg.content_.caption_:match("[Hh][Tt][Tt][Pp][Ss]://") or msg.content_.caption_:match("[Hh][Tt][Tt][Pp]://") or msg.content_.caption_:match(".[Ii][Rr]") or msg.content_.caption_:match(".[Cc][Oo][Mm]") or msg.content_.caption_:match(".[Oo][Rr][Gg]") or msg.content_.caption_:match(".[Ii][Nn][Ff][Oo]") or msg.content_.caption_:match("[Ww][Ww][Ww].") or msg.content_.caption_:match(".[Tt][Kk]") or msg.content_.ID == "MessageEntityTextUrl" or msg.content_.ID == "MessageEntityUrl" then
+            if database:get('bot:webpage:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Web] [Location]")
+            end
+          end
+          if msg.content_.caption_:match("[\216-\219][\128-\191]") then
+            if database:get('bot:arabic:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Farsi] [Location]")
+            end
+          end
+          if msg.content_.caption_:match("[A-Z]") or msg.content_.caption_:match("[a-z]") then
+            if database:get('bot:english:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [English] [Location]")
+            end
+          end
+        end
+      end
+      --Video
+      --Video
+      ------- --- Video--------- Video
+      -- -----------------Video
+      --Video
+      --Video
+    elseif msg_type == 'MSG:Video' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if msg.forward_info_ then
+          if database:get('bot:forward:mute'..msg.chat_id_) then
+            if msg.forward_info_.ID == "MessageForwardedFromUser" or msg.forward_info_.ID == "MessageForwardedPost" then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Fwd] [Video]")
+            end
+          end
+        end
+        if database:get('bot:video:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Video]")
+        end
+        if msg.content_.caption_ then
+          check_filter_words(msg, msg.content_.caption_)
+          if database:get('bot:links:mute'..msg.chat_id_) then
+            if msg.content_.caption_:match("[Tt][Ee][Ll][Ee][Gg][Rr][Aa][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt][Ll][Gg][Rr][Mm].[Mm][Ee]") or msg.content_.caption_:match("[Tt].[Mm][Ee]") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Link] [Video]")
+            end
+          end
+          if database:get('tags:lock'..msg.chat_id_) then
+            if msg.content_.caption_:match("@") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Tag] [Video]")
+            end
+          end
+          if msg.content_.caption_:match("#") then
+            if database:get('bot:hashtag:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Hashtag] [Video]")
+            end
+          end
+          if msg.content_.caption_:match("[Hh][Tt][Tt][Pp][Ss]://") or msg.content_.caption_:match("[Hh][Tt][Tt][Pp]://") or msg.content_.caption_:match(".[Ii][Rr]") or msg.content_.caption_:match(".[Cc][Oo][Mm]") or msg.content_.caption_:match(".[Oo][Rr][Gg]") or msg.content_.caption_:match(".[Ii][Nn][Ff][Oo]") or msg.content_.caption_:match("[Ww][Ww][Ww].") or msg.content_.caption_:match(".[Tt][Kk]") or msg.content_.ID == "MessageEntityTextUrl" or msg.content_.ID == "MessageEntityUrl" then
+            if database:get('bot:webpage:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Web] [Video] ")
+            end
+          end
+          if msg.content_.caption_:match("[\216-\219][\128-\191]") then
+            if database:get('bot:arabic:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Farsi] [Video] ")
+            end
+          end
+          if msg.content_.caption_:match("[A-Z]") or msg.content_.caption_:match("[a-z]") then
+            if database:get('bot:english:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [English] [Video]")
+            end
+          end
+        end
+      end
+      --Gif
+      --Gif
+      ------- --- Gif--------- Gif
+      -- -----------------Gif
+      --Gif
+      --Gif
+    elseif msg_type == 'MSG:Gif' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+        if msg.forward_info_ then
+          if database:get('bot:forward:mute'..msg.chat_id_) then
+            if msg.forward_info_.ID == "MessageForwardedFromUser" or msg.forward_info_.ID == "MessageForwardedPost" then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Fwd] [Gif]")
+            end
+          end
+        end
+        if database:get('bot:gifs:mute'..msg.chat_id_) then
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+          print("Deleted [Lock] [Gif]")
+        end
+        if msg.content_.caption_ then
+          check_filter_words(msg, msg.content_.caption_)
+          if database:get('bot:links:mute'..msg.chat_id_) then
+            if msg.content_.caption_:match("[Hh][Tt][Tt][Pp][Ss]://") or msg.content_.caption_:match("[Hh][Tt][Tt][Pp]://") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Link] [Gif] ")
+            end
+          end
+          if database:get('tags:lock'..msg.chat_id_) then
+            if msg.content_.caption_:match("@") then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Tag] [Gif]")
+            end
+          end
+          if msg.content_.caption_:match("#") then
+            if database:get('bot:hashtag:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Hashtag] [Gif]")
+            end
+          end
+          if msg.content_.caption_:match("[Hh][Tt][Tt][Pp][Ss]://") or msg.content_.caption_:match("[Hh][Tt][Tt][Pp]://") or msg.content_.caption_:match(".[Ii][Rr]") or msg.content_.caption_:match(".[Cc][Oo][Mm]") or msg.content_.caption_:match(".[Oo][Rr][Gg]") or msg.content_.caption_:match(".[Ii][Nn][Ff][Oo]") or msg.content_.caption_:match("[Ww][Ww][Ww].") or msg.content_.caption_:match(".[Tt][Kk]") then
+            if database:get('bot:webpage:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Web] [Gif]")
+            end
+          end
+          if msg.content_.caption_:match("[\216-\219][\128-\191]") then
+            if database:get('bot:arabic:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Farsi] [Gif]")
+            end
+          end
+          if msg.content_.caption_:match("[A-Z]") or msg.content_.caption_:match("[a-z]") then
+            if database:get('bot:english:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [English] [Gif]")
+            end
+          end
+        end
+      end
+      --Text
+      --Text
+      ------- --- Text--------- Text
+      -- -----------------Text
+      --Text
+      --Text
+    elseif msg_type == 'MSG:Text' then
+      if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+        if database:get('anti-flood:'..msg.chat_id_) then
+          database:setex(pm, TIME_CHECK, msgs+1)
+        end
+      end
+      --vardump(msg)
+      if database:get("bot:group:link"..msg.chat_id_) == 'waiting' and is_momod(msg.sender_user_id_, msg.chat_id_) then
+        if msg.content_.text_:match("(https://telegram.me/joinchat/%S+)") or msg.content_.text_:match("(https://t.me/joinchat/%S+)") then
+          local glink = msg.content_.text_:match("(https://telegram.me/joinchat/%S+)") or msg.content_.text_:match("(https://t.me/joinchat/%S+)")
+          local hash = "bot:group:link"..msg.chat_id_
+          database:set(hash,glink)
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, 'Group link has been saved ✅', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, ' لینک گروه ثبت شد ✅', 1, 'md')
+          end
+        end
+      end
+      function check_username(extra,result,success)
+        --vardump(result)
+        local username = (result.username_ or '')
+        local svuser = 'user:'..result.id_
+        if username then
+          database:hset(svuser, 'username', username)
+        end
+        if username and username:match("[Bb][Oo][Tt]$") or username:match("_[Bb][Oo][Tt]$") then
+          if database:get('bot:bots:mute'..msg.chat_id_) and not is_momod(msg.chat_id_, msg.chat_id_) then
+            local id = msg.id_
+            local msgs = {[0] = id}
+            local chat = msg.chat_id_
+            delete_msg(chat,msgs)
+            chat_kick(msg.chat_id_, msg.sender_user_id_)
+            return false
+          end
+        end
+      end
+      getUser(msg.sender_user_id_,check_username)
+      database:set('bot:editid'.. msg.id_,msg.content_.text_)
+      if not is_free(msg, msg.content_.text_) then
+        if not is_vipmem(msg.sender_user_id_, msg.chat_id_) then
+          check_filter_words(msg,text)
+          if text:match("[Tt][Ee][Ll][Ee][Gg][Rr][Aa][Mm].[Mm][Ee]") or text:match("[Tt][Ll][Gg][Rr][Mm].[Mm][Ee]") or text:match("[Tt].[Mm][Ee]") then
+            if database:get('bot:links:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Link] [Text]")
+              if database:get('bot:strict'..msg.chat_id_) then
+                chat_kick(msg.chat_id_, msg.sender_user_id_)
+              end
+            end
+          end
+          if database:get('bot:text:mute'..msg.chat_id_) then
+            local id = msg.id_
+            local msgs = {[0] = id}
+            local chat = msg.chat_id_
+            delete_msg(chat,msgs)
+            print("Deleted [Lock] [Text]")
+          end
+          if msg.forward_info_ then
+            if database:get('bot:forward:mute'..msg.chat_id_) then
+              if msg.forward_info_.ID == "MessageForwardedFromUser" or msg.forward_info_.ID == "MessageForwardedPost" then
+                local id = msg.id_
+                local msgs = {[0] = id}
+                local chat = msg.chat_id_
+                delete_msg(chat,msgs)
+                print("Deleted [Lock] [Fwd] [Text]")
+              end
+            end
+          end
+          if msg.content_.text_:match("@") then
+            if database:get('tags:lock'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Tag] [Text]")
+            end
+          end
+          if msg.content_.text_:match("#") then
+            if database:get('bot:hashtag:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Hashtag] [Text]")
+            end
+          end
+          if text:match("[Hh][Tt][Tt][Pp][Ss]://") or text:match("[Hh][Tt][Tt][Pp]://") or text:match(".[Ii][Rr]") or text:match(".[Cc][Oo][Mm]") or text:match(".[Oo][Rr][Gg]") or text:match(".[Ii][Nn][Ff][Oo]") or text:match("[Ww][Ww][Ww].") or text:match(".[Tt][Kk]") or msg.content_.ID == "MessageEntityTextUrl" or msg.content_.ID == "MessageEntityUrl" then
+            if database:get('bot:webpage:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Web] [Text]")
+            end
+          end
+          if msg.content_.text_:match("[\216-\219][\128-\191]") then
+            if database:get('bot:arabic:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Farsi] [Text]")
+            end
+          end
+          if msg.content_.text_ then
+            local _nl, ctrl_chars = string.gsub(text, '%c', '')
+            local _nl, real_digits = string.gsub(text, '%d', '')
+            local id = msg.id_
+            local msgs = {[0] = id}
+            local chat = msg.chat_id_
+            local hash = 'bot:sens:spam'..msg.chat_id_
+            if not database:get(hash) then
+              sens = 400
+            else
+              sens = tonumber(database:get(hash))
+            end
+            if database:get('bot:spam:mute'..msg.chat_id_) and string.len(msg.content_.text_) > (sens) or ctrl_chars > (sens) or real_digits > (sens) then
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [Spam] ")
+            end
+          end
+          if msg.content_.text_:match("[A-Z]") or msg.content_.text_:match("[a-z]") then
+            if database:get('bot:english:mute'..msg.chat_id_) then
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+              print("Deleted [Lock] [English] [Text]")
+            end
+          end
+        end
+      end
+      -------------------------------------------------------------------------------------------------------
+      -------------------------------------------------------------------------------------------------------
+      -------------------------------------------------------------------------------------------------------
+      ---------------------------******** END MSG CHECKS ********--------------------------------------------
+      -------------------------------------------------------------------------------------------------------
+      -------------------------------------------------------------------------------------------------------
+	 local text = text:gsub('[!/#]','')
+      if database:get('bot:cmds'..msg.chat_id_) and not is_momod(msg.sender_user_id_, msg.chat_id_) then
+        print("Return False [Lock] [Cmd]")
+        return false
+      else
+        ------------------------------------ With Pattern -------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Pp]ing$") or text:match("^پینگ$") then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, 'Bot is now Online', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, 'ربات هم اکنون آنلاین میباشد', 1, 'md')
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_admin(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ll]eave$") or text:match("^ترک گروه$") then
+            chat_leave(msg.chat_id_, bot_id)
+            database:srem("bot:groups",msg.chat_id_)
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        local text = msg.content_.text_:gsub('ارتقا مقام','Promote')
+        if text:match("^[Pp]romote$") and is_owner(msg.sender_user_id_, msg.chat_id_) and msg.reply_to_message_id_ ~= 0  then
+          function promote_by_reply(extra, result, success)
+            local hash = 'bot:momod:'..msg.chat_id_
+            if database:sismember(hash, result.sender_user_id_) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is now a moderator', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' هم اکنون مدیر است !', 1, 'md')
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' *promoted* to moderator', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' به مدیریت ارتقا مقام یافت !', 1, 'md')
+              end
+              database:sadd(hash, result.sender_user_id_)
+            end
+          end
+          getMessage(msg.chat_id_, msg.reply_to_message_id_,promote_by_reply)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Pp]romote @(.*)$") and is_owner(msg.sender_user_id_, msg.chat_id_) then
+          local ap = {string.match(text, "^([Pp]romote) @(.*)$")}
+          function promote_by_username(extra, result, success)
+            if result.id_ then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User :'..result.id_..' *promoted* to moderator'
+              else
+                texts = '> کاربر با شناسه : '..result.id_..' به مدیریت ارتقا مقام یافت !'
+              end
+              database:sadd('bot:momod:'..msg.chat_id_, result.id_)
+            else
+              if not database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User not found'
+              else
+                texts = '> کاربر یافت نشد !'
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, texts, 1, 'md')
+          end
+          resolve_username(ap[2],promote_by_username)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Pp]romote (%d+)$") and is_owner(msg.sender_user_id_, msg.chat_id_) then
+          local ap = {string.match(text, "^([Pp]romote) (%d+)$")}
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' *promoted* to moderator', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' به مدیریت ارتقا مقام یافت !', 1, 'md')
+          end
+          database:sadd('bot:momod:'..msg.chat_id_, ap[2])
+        end
+        -----------------------------------------------------------------------------------------------
+        local text = msg.content_.text_:gsub('عزل مقام','Demote')
+        if text:match("^[Dd]emote$") and is_owner(msg.sender_user_id_, msg.chat_id_) and msg.reply_to_message_id_ ~= 0 then
+          function demote_by_reply(extra, result, success)
+            local hash = 'bot:momod:'..msg.chat_id_
+            if not database:sismember(hash, result.sender_user_id_) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is not a moderator !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' مدیر نمیباشد !', 1, 'md')
+              end
+            else
+              database:srem(hash, result.sender_user_id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' was *removed* from moderator !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' از مدیریت حذف شد !', 1, 'md')
+              end
+            end
+          end
+          getMessage(msg.chat_id_, msg.reply_to_message_id_,demote_by_reply)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Dd]emote @(.*)$") and is_owner(msg.sender_user_id_, msg.chat_id_) then
+          local hash = 'bot:momod:'..msg.chat_id_
+          local ap = {string.match(text, "^([Dd]emote) @(.*)$")}
+          function demote_by_username(extra, result, success)
+            if result.id_ then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User : '..result.id_..' was demoted'
+              else
+                texts = '> کاربر با شناسه : '..result.id_..' عزل مقام شد'
+              end
+              database:srem(hash, result.id_)
+            else
+              if not database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User not found !'
+              else
+                texts = '> کاربر یافت نشد !'
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, texts, 1, 'md')
+          end
+          resolve_username(ap[2],demote_by_username)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Dd]emote (%d+)$") and is_owner(msg.sender_user_id_, msg.chat_id_) then
+          local hash = 'bot:momod:'..msg.chat_id_
+          local ap = {string.match(text, "^([Dd]emote) (%d+)$")}
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' was demoted !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' عزل مقام شد !', 1, 'md')
+          end
+          database:srem(hash, ap[2])
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          local text = msg.content_.text_:gsub('ارتقا به عضو ویژه','Setvip')
+          if text:match("^[Ss]etvip$") and msg.reply_to_message_id_ ~= 0  then
+            function promote_by_reply(extra, result, success)
+              local hash = 'bot:vipmem:'..msg.chat_id_
+              if database:sismember(hash, result.sender_user_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is now a VIP member !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' هم اکنون عضو ویژه است !', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' *promoted* to VIP member !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' به عضو ویژه ارتقا مقام یافت !', 1, 'md')
+                end
+                database:sadd(hash, result.sender_user_id_)
+              end
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,promote_by_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Ss]etvip @(.*)$") then
+            local ap = {string.match(text, "^([Ss]etvip) @(.*)$")}
+            function promote_by_username(extra, result, success)
+              if result.id_ then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  texts = '> User :'..result.id_..' *promoted* to VIP member !'
+                else
+                  texts = '> کاربر با شناسه : '..result.id_..' به عضو ویژه ارتقا مقام یافت !'
+                end
+                database:sadd('bot:vipmem:'..msg.chat_id_, result.id_)
+              else
+                if not database:get('lang:gp:'..msg.chat_id_) then
+                  texts = '> User not found'
+                else
+                  texts = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, texts, 1, 'md')
+            end
+            resolve_username(ap[2],promote_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Ss]etvip (%d+)$") then
+            local ap = {string.match(text, "^([Ss]etvip) (%d+)$")}
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' *promoted* to VIP member !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' به عضو ویژه ارتقا مقام یافت !', 1, 'md')
+            end
+            database:sadd('bot:vipmem:'..msg.chat_id_, ap[2])
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('حذف از عضو ویژه','Demvip')
+          if text:match("^[Dd]emvip$") and msg.reply_to_message_id_ ~= 0 then
+            function demote_by_reply(extra, result, success)
+              local hash = 'bot:vipmem:'..msg.chat_id_
+              if not database:sismember(hash, result.sender_user_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is not a VIP member !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' مدیر نمیباشد !', 1, 'md')
+                end
+              else
+                database:srem(hash, result.sender_user_id_)
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' was *removed* from VIP member !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' از عضو ویژه حذف شد !', 1, 'md')
+                end
+              end
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,demote_by_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Dd]emvip @(.*)$") then
+            local hash = 'bot:vipmem:'..msg.chat_id_
+            local ap = {string.match(text, "^([Dd]emvip) @(.*)$")}
+            function demote_by_username(extra, result, success)
+              if result.id_ then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  texts = '> User : '..result.id_..' was demoted from VIP member !'
+                else
+                  texts = '> کاربر با شناسه : '..result.id_..' از عضو ویژه حذف شد !'
+                end
+                database:srem(hash, result.id_)
+              else
+                if not database:get('lang:gp:'..msg.chat_id_) then
+                  texts = '> User not found !'
+                else
+                  texts = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, texts, 1, 'md')
+            end
+            resolve_username(ap[2],demote_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Dd]emvip (%d+)$") then
+            local hash = 'bot:vipmem:'..msg.chat_id_
+            local ap = {string.match(text, "^([Dd]emvip) (%d+)$")}
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' was demoted from VIP member !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' از عضو ویژه شد !', 1, 'md')
+            end
+            database:srem(hash, ap[2])
+          end
+        end
+        -------------------------------------------------------------------------------------------------------
+        if text:match("^[Gg]p id$") or text:match("^شناسه گروه$") then
+          if database:get('lang:gp:'..msg.chat_id_) then
+            texts = "> Group ID : "..msg.chat_id_
+          else
+            texts = "> شناسه گروه : "..msg.chat_id_
+          end
+          send(msg.chat_id_, msg.id_, 1, texts, 1, 'md')
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Mm]y username$") or text:match("^یوزرنیم من$") then
+          function get_username(extra,result,success)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              text = '> Your Username : {User}'
+            else
+              text = '> یوزرنیم شما : {User}'
+            end
+            local text = text:gsub('{User}',('@'..result.username_ or ''))
+            send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+          end
+          getUser(msg.sender_user_id_,get_username)
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Dd]el$") or text:match("^حذف$") and is_sudo(msg) and msg.reply_to_message_id_ ~= 0 then
+            local id = msg.id_
+            local msgs = {[0] = id}
+            delete_msg(msg.chat_id_,{[0] = msg.reply_to_message_id_})
+            delete_msg(msg.chat_id_,msgs)
+          end
+          ----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('مسدود','Ban')
+          if text:match("^[Bb]an$") and msg.reply_to_message_id_ ~= 0 then
+            function ban_by_reply(extra, result, success)
+              local hash = 'bot:banned:'..msg.chat_id_
+              if not is_momod(result.sender_user_id_, result.chat_id_) then
+                if database:sismember(hash, result.sender_user_id_) then
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is already banned !', 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' هم اکنون مسدود است !', 1, 'md')
+                  end
+                  chat_kick(result.chat_id_, result.sender_user_id_)
+                else
+                  database:sadd(hash, result.sender_user_id_)
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' has been banned !', 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' مسدود گردید !', 1, 'md')
+                  end
+                  chat_kick(result.chat_id_, result.sender_user_id_)
+                end
+              end
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,ban_by_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Bb]an @(.*)$") then
+            local ap = {string.match(text, "^([Bb]an) @(.*)$")}
+            function ban_by_username(extra, result, success)
+              if result.id_ then
+                if not is_momod(result.id_, msg.chat_id_) then
+                  database:sadd('bot:banned:'..msg.chat_id_, result.id_)
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    texts = '> User : '..result.id_..' has been banned !'
+                  else
+                    texts = '> کاربر با شناسه : '..result.id_..' مسدود گردید !'
+                  end
+                  chat_kick(msg.chat_id_, result.id_)
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  texts = '> User not found'
+                else
+                  texts = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, texts, 1, 'html')
+            end
+            resolve_username(ap[2],ban_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Bb]an (%d+)$") then
+            local ap = {string.match(text, "^([Bb]an) (%d+)$")}
+            if not is_momod(ap[2], msg.chat_id_) then
+              database:sadd('bot:banned:'..msg.chat_id_, ap[2])
+              chat_kick(msg.chat_id_, ap[2])
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' has been banned !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' مسدود گردید !', 1, 'md')
+              end
+            end
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('حذف کلی پیام','Delall')
+          if text:match("^[Dd]elall$") and msg.reply_to_message_id_ ~= 0 then
+            function delall_by_reply(extra, result, success)
+              del_all_msgs(result.chat_id_, result.sender_user_id_)
+              local id = msg.id_
+              local msgs = {[0] = id}
+              local chat = msg.chat_id_
+              delete_msg(chat,msgs)
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,delall_by_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Dd]elall (%d+)$") then
+            local ass = {string.match(text, "^([Dd]elall) (%d+)$")}
+            if not ass then
+              return false
+            else
+              del_all_msgs(msg.chat_id_, ass[2])
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> All messages from User : '..ass[2]..' has been deleted !', 1, 'html')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> تمامی پیام های ارسالی کاربر با شناسه : '..ass[2]..' حذف شد !', 1, 'html')
+              end
+            end
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Dd]elall @(.*)$") then
+            local ap = {string.match(text, "^([Dd]elall) @(.*)$")}
+            function delall_by_username(extra, result, success)
+              if result.id_ then
+                del_all_msgs(msg.chat_id_, result.id_)
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> All messages from User : '..result.id_..' has been deleted !'
+                else
+                  text = '> تمامی پیام های ارسالی کاربر با شناسه : '..result.id_..' حذف شد !'
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> User not found !'
+                else
+                  text = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+            end
+            resolve_username(ap[2],delall_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('آزاد کردن','Unban')
+          if text:match("^[Uu]nban$") and msg.reply_to_message_id_ ~= 0 then
+            function unban_by_reply(extra, result, success)
+              local hash = 'bot:banned:'..msg.chat_id_
+              if not database:sismember(hash, result.sender_user_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is not banned !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' مسدود نیست !', 1, 'md')
+                end
+              else
+                database:srem(hash, result.sender_user_id_)
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' has been unbanned !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' آزاد شد !', 1, 'md')
+                end
+              end
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,unban_by_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Uu]nban @(.*)$") then
+            local ap = {string.match(text, "^([Uu]nban) @(.*)$")}
+            function unban_by_username(extra, result, success)
+              if result.id_ then
+                if not database:sismember('bot:banned:'..msg.chat_id_, result.id_) then
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, '> User : '..result.id_..' is not banned !', 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.id_..' مسدود نیست !', 1, 'md')
+                  end
+                else
+                  database:srem('bot:banned:'..msg.chat_id_, result.id_)
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    text = '> User : '..result.id_..' has been unbanned !'
+                  else
+                    text = '> کاربر با شناسه : '..result.id_..' آزاد شد !'
+                  end
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> User not found !'
+                else
+                  text = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+            end
+            resolve_username(ap[2],unban_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Uu]nban (%d+)$") then
+            local ap = {string.match(text, "^([Uu]nban) (%d+)$")}
+            if not database:sismember('bot:banned:'..msg.chat_id_, ap[2]) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' is not banned !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' مسدود نیست !', 1, 'md')
+              end
+            else
+              database:srem('bot:banned:'..msg.chat_id_, ap[2])
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' has been unbanned !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' آزاد شد !', 1, 'md')
+              end
+            end
+          end
+          ---------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('مسدودسازی','Banall')
+          if text:match("^[Bb]anall$") and is_sudo(msg) and msg.reply_to_message_id_ then
+            function gban_by_reply(extra, result, success)
+              local hash = 'bot:gban:'
+              database:sadd(hash, result.sender_user_id_)
+              chat_kick(result.chat_id_, result.sender_user_id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' has been globaly banned !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' به طور کلی مسدود سازی گردید !', 1, 'md')
+              end
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,gban_by_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Bb]anall @(.*)$") and is_sudo(msg) then
+            local aps = {string.match(text, "^([Bb]anall) @(.*)$")}
+            function gban_by_username(extra, result, success)
+              local hash = 'bot:gban:'
+              if result.id_ then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> User : '..result.id_..' has been globaly banned !'
+                else
+                  text = '> کاربر با شناسه : '..result.id_..' به صورت کلی مسدود گردید !'
+                end
+                database:sadd(hash, result.id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> User not found !'
+                else
+                  text = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+            end
+            resolve_username(aps[2],gban_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Bb]anall (%d+)$") and is_sudo(msg) then
+            local ap = {string.match(text, "^([Bb]anall) (%d+)$")}
+            local hash = 'bot:gban:'
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' has been globaly banned !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' به صورت کلی مسدود گردید !', 1, 'md')
+            end
+            database:set('bot:gban:'..ap[2],true)
+            database:sadd(hash, ap[2])
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('آزادسازی','unbanall')
+          if text:match("^[Uu]nbanall$") and is_sudo(msg) and msg.reply_to_message_id_ then
+            function ungban_by_reply(extra, result, success)
+              local hash = 'bot:gban:'
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' has been unbanned (Gban)!', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' آزادسازی شد !', 1, 'md')
+              end
+              database:srem(hash, result.sender_user_id_)
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,ungban_by_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Uu]nbanall @(.*)$") and is_sudo(msg) then
+            local apid = {string.match(text, "^([Uu]nbanall) @(.*)$")}
+            function ungban_by_username(extra, result, success)
+              local hash = 'bot:gban:'
+              if result.id_ then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> User : '..result.id_..' has been unbanned (Gban) !'
+                else
+                  text = '> کاربر با شناسه : '..result.id_..' از لیست مسدودیت ربات آزاد شد !'
+                end
+                database:srem(hash, result.id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> User not found !'
+                else
+                  text = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+            end
+            resolve_username(apid[2],ungban_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Uu]nbanall (%d+)$") and is_sudo(msg) then
+            local ap = {string.match(text, "^([Uu]nbanall) (%d+)$")}
+            local hash = 'bot:gban:'
+              database:srem(hash, ap[2])
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' has been unbanned !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' آزادسازی شد !', 1, 'md')
+              end
+            end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('بی صدا','Muteuser')
+          if text:match("^[Mm]uteuser$") and msg.reply_to_message_id_ ~= 0 then
+            function mute_by_reply(extra, result, success)
+              local hash = 'bot:muted:'..msg.chat_id_
+              if database:sismember(hash, result.sender_user_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is already muted !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' هم اکنون بی صدا است !', 1, 'md')
+                end
+              else
+                database:sadd(hash, result.sender_user_id_)
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' has been muted !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' بی صدا گردید !', 1, 'md')
+                end
+              end
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,mute_by_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Mm]uteuser @(.*)$") then
+            local ap = {string.match(text, "^([Mm]uteuser) @(.*)$")}
+            function mute_by_username(extra, result, success)
+              if result.id_ then
+                database:sadd('bot:muted:'..msg.chat_id_, result.id_)
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  texts = '> User : '..result.id_..' has been muted !'
+                else
+                  texts = '> کاربر با شناسه : '..result.id_..' بی صدا گردید !'
+                end
+                chat_kick(msg.chat_id_, result.id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  texts = '> User not found !'
+                else
+                  texts = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, texts, 1, 'html')
+            end
+            resolve_username(ap[2],mute_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Mm]uteuser (%d+)$") then
+            local ap = {string.match(text, "^([Mm]uteuser) (%d+)$")}
+            if database:sismember('bot:muted:'..msg.chat_id_, ap[2]) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' is already muted !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' هم اکنون بی صدا است !', 1, 'md')
+              end
+            else
+              database:sadd('bot:muted:'..msg.chat_id_, ap[2])
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' has been muted !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' بی صدا گردید !', 1, 'md')
+              end
+            end
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('حذف بی صدا','Unmuteuser')
+          if text:match("^[Uu]nmuteuser$") and msg.reply_to_message_id_ ~= 0 then
+            function unmute_by_reply(extra, result, success)
+              local hash = 'bot:muted:'..msg.chat_id_
+              if not database:sismember(hash, result.sender_user_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' not muted !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' بی صدا نیست !', 1, 'md')
+                end
+              else
+                database:srem(hash, result.sender_user_id_)
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' has been unmuted !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' از حالت بی صدا خارج گردید !', 1, 'md')
+                end
+              end
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,unmute_by_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Uu]nmuteuser @(.*)$") then
+            local ap = {string.match(text, "^([Uu]nmuteuser) @(.*)$")}
+            function unmute_by_username(extra, result, success)
+              if result.id_ then
+                if not database:sismember('bot:muted:'..msg.chat_id_, result.id_) then
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, '> User : '..result.id_..' is not muted !', 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.id_..' بی صدا نیست !', 1, 'md')
+                  end
+                else
+                  database:srem('bot:muted:'..msg.chat_id_, result.id_)
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    text = '> User : '..result.id_..' has been unmuted !'
+                  else
+                    text = '> کاربر با شناسه : '..result.id_..' از حالت بی صدا خارج گردید !'
+                  end
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> User not found !'
+                else
+                  text = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+            end
+            resolve_username(ap[2],unmute_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Uu]nmuteuser (%d+)$") then
+            local ap = {string.match(text, "^([Uu]nmuteuser) (%d+)$")}
+            if not database:sismember('bot:muted:'..msg.chat_id_, ap[2]) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' is not muted !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' بی صدا نیست !', 1, 'md')
+              end
+            else
+              database:srem('bot:muted:'..msg.chat_id_, ap[2])
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' has been unmuted !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' از حالت بی صدا خارج گردید !', 1, 'md')
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        local text = msg.content_.text_:gsub('ارتقا به صاحب گروه','Setowner')
+        if text:match("^[Ss]etowner$") and is_admin(msg.sender_user_id_) and msg.reply_to_message_id_ ~= 0 then
+          function setowner_by_reply(extra, result, success)
+            local hash = 'bot:owners:'..msg.chat_id_
+            if database:sismember(hash, result.sender_user_id_) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر '..result.sender_user_id_..' هم اکنون صاحب گروه میباشد !', 1, 'md')
+              end
+            else
+              database:sadd(hash, result.sender_user_id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' added to owner list !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر '..result.sender_user_id_..' به عنوان صاحب گروه انتخاب شد !', 1, 'md')
+              end
+            end
+          end
+          getMessage(msg.chat_id_, msg.reply_to_message_id_,setowner_by_reply)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Ss]etowner @(.*)$") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local ap = {string.match(text, "^([Ss]etowner) @(.*)$")}
+          function setowner_by_username(extra, result, success)
+            if result.id_ then
+              database:sadd('bot:owners:'..msg.chat_id_, result.id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User : '..result.id_..' added to owner list !'
+              else
+                texts = '> کاربر '..result.id_..' به عنوان صاحب گروه انتخاب شد !'
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User not found !'
+              else
+                texts = '> کاربر یافت نشد !'
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, texts, 1, 'html')
+          end
+          resolve_username(ap[2],setowner_by_username)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Ss]etowner (%d+)$") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local ap = {string.match(text, "^([Ss]etowner) (%d+)$")}
+          database:sadd('bot:owners:'..msg.chat_id_, ap[2])
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' added to owner list !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> کاربر '..ap[2]..' به عنوان صاحب گروه انتخاب شد !', 1, 'md')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        local text = msg.content_.text_:gsub('حذف از صاحب گروه','Demowner')
+        if text:match("^[Dd]emowner$") and is_admin(msg.sender_user_id_) and msg.reply_to_message_id_ ~= 0 then
+          function deowner_by_reply(extra, result, success)
+            local hash = 'bot:owners:'..msg.chat_id_
+            if not database:sismember(hash, result.sender_user_id_) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is not a owner !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر : '..result.sender_user_id_..' صاحب گروه نیست !', 1, 'md')
+              end
+            else
+              database:srem(hash, result.sender_user_id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' removed from owner list !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر : '..result.sender_user_id_..' از مقام صاحب گروه حذف شد !', 1, 'md')
+              end
+            end
+          end
+          getMessage(msg.chat_id_, msg.reply_to_message_id_,deowner_by_reply)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Dd]emowner @(.*)$") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local hash = 'bot:owners:'..msg.chat_id_
+          local ap = {string.match(text, "^([Dd]emowner) @(.*)$")}
+          function remowner_by_username(extra, result, success)
+            if result.id_ then
+              database:srem(hash, result.id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User : '..result.id_..' removed from owner list !'
+              else
+                texts = '> کاربر : '..result.id_..' از مقام صاحب گروه حذف شد !'
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User not found !'
+              else
+                texts = '> کاربر یافت نشد !'
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, texts, 1, 'html')
+          end
+          resolve_username(ap[2],remowner_by_username)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Dd]emowner (%d+)$") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local hash = 'bot:owners:'..msg.chat_id_
+          local ap = {string.match(text, "^([Dd]emowner) (%d+)$")}
+          database:srem(hash, ap[2])
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' removed from owner list !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> کاربر : '..ap[2]..' از مقام صاحب گروه حذف شد !', 1, 'md')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        local text = msg.content_.text_:gsub('ارتقا به ادمین ربات','Addadmin')
+        if text:match("^[Aa]ddadmin$") and is_sudo(msg) and msg.reply_to_message_id_ ~= 0 then
+          function addadmin_by_reply(extra, result, success)
+            local hash = 'bot:admins:'
+            if database:sismember(hash, result.sender_user_id_) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is already admin !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر : '..result.sender_user_id_..' هم اکنون ادمین است !', 1, 'md')
+              end
+            else
+              database:sadd(hash, result.sender_user_id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' added to admin list !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر : '..result.sender_user_id_..' به ادمین ها اضافه شد !', 1, 'md')
+              end
+            end
+          end
+          getMessage(msg.chat_id_, msg.reply_to_message_id_,addadmin_by_reply)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Aa]ddadmin @(.*)$") and is_sudo(msg) then
+          local ap = {string.match(text, "^([Aa]ddadmin) @(.*)$")}
+          function addadmin_by_username(extra, result, success)
+            if result.id_ then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User : '..result.id_..' added to admin list !'
+              else
+                texts = '> کاربر : '..result.id_..' به ادمین ها اضافه شد !'
+              end
+              database:sadd('bot:admins:', result.id_)
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User not found !'
+              else
+                texts = '> کاربر یافت نشد !'
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, texts, 1, 'html')
+          end
+          resolve_username(ap[2],addadmin_by_username)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Aa]ddadmin (%d+)$") and is_sudo(msg) then
+          local ap = {string.match(text, "^([Aa]ddadmin) (%d+)$")}
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' added to admin list !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> کاربر : '..ap[2]..' به ادمین ها اضافه شد !', 1, 'md')
+          end
+          database:sadd('bot:admins:', ap[2])
+        end
+        -----------------------------------------------------------------------------------------------
+        local text = msg.content_.text_:gsub('حذف از ادمین ربات','Remadmin')
+        if text:match("^[Rr]emadmin$") and is_sudo(msg) and msg.reply_to_message_id_ ~= 0 then
+          function deadmin_by_reply(extra, result, success)
+            local hash = 'bot:admins:'
+            if not database:sismember(hash, result.sender_user_id_) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' is not admin !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر : '..result.sender_user_id_..' ادمین نیست !', 1, 'md')
+              end
+            else
+              database:srem(hash, result.sender_user_id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' removed from admin list !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر : '..result.sender_user_id_..' از ادمینی حذف شد !', 1, 'md')
+              end
+            end
+          end
+          getMessage(msg.chat_id_, msg.reply_to_message_id_,deadmin_by_reply)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Rr]emadmin @(.*)$") and is_sudo(msg) then
+          local hash = 'bot:admins:'
+          local ap = {string.match(text, "^([Rr]emadmin) @(.*)$")}
+          function remadmin_by_username(extra, result, success)
+            if result.id_ then
+              database:srem(hash, result.id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User : '..result.id_..' removed from admin list !'
+              else
+                texts = '> کاربر : '..result.id_..' از ادمینی حذف شد !'
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                texts = '> User not found !'
+              else
+                texts = '> کاربر یافت نشد !'
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, texts, 1, 'html')
+          end
+          resolve_username(ap[2],remadmin_by_username)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Rr]emadmin (%d+)$") and is_sudo(msg) then
+          local hash = 'bot:admins:'
+          local ap = {string.match(text, "^([Rr]emadmin) (%d+)$")}
+          database:srem(hash, ap[2])
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' removed from admin list !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> کاربر : '..ap[2]..' از ادمینی حذف شد !', 1, 'md')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Mm]odlist$") or text:match("^لیست مدیران گروه$") then
+            local hash =  'bot:momod:'..msg.chat_id_
+            local list = database:smembers(hash)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              text = "> List of moderator : \n\n"
+            else
+              text = "> لیست مدیران گروه : \n\n"
+            end
+            for k,v in pairs(list) do
+              local user_info = database:hgetall('user:'..v)
+              if user_info and user_info.username then
+                local username = user_info.username
+                text = text..k.." - @"..username.." ["..v.."]\n"
+              else
+                text = text..k.." - "..v.."\n"
+              end
+            end
+            if #list == 0 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                text = "> List of moderator is empty !"
+              else
+                text = "> لیست مدیران خالی است !"
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+          end
+          ---------------------------------------------------------------------------
+          if text:match("^[Vv]iplist$") or text:match("^لیست عضو های ویژه$") then
+            local hash =  'bot:vipmem:'..msg.chat_id_
+            local list = database:smembers(hash)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              text = "> List of VIP Members : \n\n"
+            else
+              text = "> لیست عضو های ویژه :\n\n"
+            end
+            for k,v in pairs(list) do
+              local user_info = database:hgetall('user:'..v)
+              if user_info and user_info.username then
+                local username = user_info.username
+                text = text..k.." - @"..username.." ["..v.."]\n"
+              else
+                text = text..k.." - "..v.."\n"
+              end
+            end
+            if #list == 0 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                text = "> List of VIP members is empty !"
+              else
+                text = "> لیست عضو های ویژه خالی است !"
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Mm]utelist$") or text:match("^لیست افراد بی صدا$") then
+            local hash =  'bot:muted:'..msg.chat_id_
+            local list = database:smembers(hash)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              text = "> List of muted users : \n\n"
+            else
+              text = "> لیست افراد بی صدا : \n\n"
+            end
+            for k,v in pairs(list) do
+              local user_info = database:hgetall('user:'..v)
+              if user_info and user_info.username then
+                local username = user_info.username
+                text = text..k.." - @"..username.." ["..v.."]\n"
+              else
+                text = text..k.." - "..v.."\n"
+              end
+            end
+            if #list == 0 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                text = "> List of muted users is empty ! "
+              else
+                text = "> لیست افراد بی صدا خالی است ! "
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Oo]wner$") or text:match("^[Oo]wnerlist$") or text:match("^لیست صاحب گروهان$") then
+            local hash =  'bot:owners:'..msg.chat_id_
+            local list = database:smembers(hash)
+            if not database:get('lang:gp:'..msg.chat_id_) then
+              text = "> لیست صاحبان گروه : \n\n"
+            else
+              text = "> Owners list : \n\n"
+            end
+            for k,v in pairs(list) do
+              local user_info = database:hgetall('user:'..v)
+              if user_info and user_info.username then
+                local username = user_info.username
+                text = text..k.." - @"..username.." ["..v.."]\n"
+              else
+                text = text..k.." - "..v.."\n"
+              end
+            end
+            if #list == 0 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                text = "> Owner list is empty !"
+              else
+                text = "> لیست صاحبان گروه خالی است !"
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Bb]anlist$") or text:match("^لیست افراد مسدود$") then
+            local hash =  'bot:banned:'..msg.chat_id_
+            local list = database:smembers(hash)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              text = "> List of banlist : \n\n"
+            else
+              text = "> لیست افراد مسدود شده : \n\n"
+            end
+            for k,v in pairs(list) do
+              local user_info = database:hgetall('user:'..v)
+              if user_info and user_info.username then
+                local username = user_info.username
+                text = text..k.." - @"..username.." ["..v.."]\n"
+              else
+                text = text..k.." - "..v.."\n"
+              end
+            end
+            if #list == 0 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                text = "> list of banlist is empty !"
+              else
+                text = "> لیست افراد مسدود شده خالی است !"
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_sudo(msg) then
+          if text:match("^[Bb]analllist$") or text:match("^لیست افراد تحت مسدودیت$") then
+            local hash =  'bot:gban:'
+            local list = database:smembers(hash)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              text = "> List of banlist : \n\n"
+            else
+              text = "> لیست افراد تحت مسدودیت : \n\n"
+            end
+            for k,v in pairs(list) do
+              local user_info = database:hgetall('user:'..v)
+              if user_info and user_info.username then
+                local username = user_info.username
+                text = text..k.." - @"..username.." ["..v.."]\n"
+              else
+                text = text..k.." - "..v.."\n"
+              end
+            end
+            if #list == 0 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                text = "> list of banalllist is empty !"
+              else
+                text = "> لیست افراد تحت مسدودیت شده خالی است !"
+              end
+            end
+            send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Aa]dminlist$") or text:match("^لیست ادمین های ربات$") and is_leader(msg) then
+          local hash =  'bot:admins:'
+          local list = database:smembers(hash)
+          if database:get('lang:gp:'..msg.chat_id_) then
+            text = "> List of admins :\n\n"
+          else
+            text = "> لیست ادمین ها :\n\n"
+          end
+          for k,v in pairs(list) do
+            local user_info = database:hgetall('user:'..v)
+            if user_info and user_info.username then
+              local username = user_info.username
+              text = text..k.." - @"..username.." ["..v.."]\n"
+            else
+              text = text..k.." - "..v.."\n"
+            end
+          end
+          if #list == 0 then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              text = "> List of admins is empty !"
+            else
+              text = "> لیست ادمین ها خالی است !"
+            end
+          end
+          send(msg.chat_id_, msg.id_, 1, text, 'html')
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Gg]etid$") or text:match("^دریافت شناسه$") and msg.reply_to_message_id_ ~= 0 then
+          function id_by_reply(extra, result, success)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, "> User ID : "..result.sender_user_id_, 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, "> شناسه کاربر : "..result.sender_user_id_, 1, 'md')
+            end
+          end
+          getMessage(msg.chat_id_,msg.reply_to_message_id_,id_by_reply)
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ii]d @(.*)$") then
+            local ap = {string.match(text, "^([Ii]d) @(.*)$")}
+            function id_by_username(extra, result, success)
+              if result.id_ then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  if tonumber(result.id_) == tonumber(bot_owner) or tonumber(result.id_) == tonumber(194279067) then
+                    t = 'Chief'
+                  elseif is_sudoid(result.id_) then
+                    t = 'Sudo'
+                  elseif is_admin(result.id_) then
+                    t = 'Bot Admin'
+                  elseif is_owner(result.id_, msg.chat_id_) then
+                    t = 'Owner'
+                  elseif is_momod(result.id_, msg.chat_id_) then
+                    t = 'Group Admin'
+                  elseif result.id_ == bot_id then
+                    t = 'Myself'
+                  else
+                    t = 'Member'
+                  end
+                end
+                if not database:get('lang:gp:'..msg.chat_id_) then
+                  if tonumber(result.id_) == tonumber(bot_owner) or tonumber(result.id_) == tonumber(194279067) then
+                    t = 'مدیر کل'
+                  elseif is_sudoid(result.id_) then
+                    t = 'مدیر ربات'
+                  elseif is_admin(result.id_) then
+                    t = 'ادمین ربات'
+                  elseif is_owner(result.id_, msg.chat_id_) then
+                    t = 'صاحب گروه'
+                  elseif is_momod(result.id_, msg.chat_id_) then
+                    t = 'مدیر گروه'
+                  elseif result.id_ == bot_id then
+                    t = 'خودم'
+                  else
+                    t = 'کاربر'
+                  end
+                end
+                local gpid = tostring(result.id_)
+                if gpid:match('^(%d+)') then
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    text = '- Username : @'..ap[2]..'\n- ID : ('..result.id_..')\n- Rank : '..t
+                  else
+                    text = '> یوزرنیم : @'..ap[2]..'\n> شناسه : ('..result.id_..')\n> مقام : '..t
+                  end
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    text = '- Username : @'..ap[2]..'\n- ID : ('..result.id_..')'
+                  else
+                    text = '> یوزرنیم : @'..ap[2]..'\n> شناسه : ('..result.id_..')'
+                  end
+                end
+              end
+              if not result.id_ then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> Username is not correct ! '
+                else
+                  text = '> یوزنیم صحیح نمیباشد  ! '
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+            end
+            resolve_username(ap[2],id_by_username)
+          end
+          if text:match("^آیدی @(.*)$") then
+            local ap = {string.match(text, "^(آیدی) @(.*)$")}
+            function id_by_username(extra, result, success)
+              if result.id_ then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  if tonumber(result.id_) == tonumber(bot_owner) or tonumber(result.id_) == tonumber(194279067) then
+                    t = 'Chief'
+                  elseif is_sudoid(result.id_) then
+                    t = 'Sudo'
+                  elseif is_admin(result.id_) then
+                    t = 'Bot Admin'
+                  elseif is_owner(result.id_, msg.chat_id_) then
+                    t = 'Owner'
+                  elseif is_momod(result.id_, msg.chat_id_) then
+                    t = 'Group Admin'
+                  elseif result.id_ == bot_id then
+                    t = 'Myself'
+                  else
+                    t = 'Member'
+                  end
+                end
+                if not database:get('lang:gp:'..msg.chat_id_) then
+                  if tonumber(result.id_) == tonumber(bot_owner) or tonumber(result.id_) == tonumber(194279067) then
+                    t = 'مدیر کل'
+                  elseif is_sudoid(result.id_) then
+                    t = 'مدیر ربات'
+                  elseif is_admin(result.id_) then
+                    t = 'ادمین ربات'
+                  elseif is_owner(result.id_, msg.chat_id_) then
+                    t = 'صاحب گروه'
+                  elseif is_momod(result.id_, msg.chat_id_) then
+                    t = 'مدیر گروه'
+                  elseif result.id_ == bot_id then
+                    t = 'خودم'
+                  else
+                    t = 'کاربر'
+                  end
+                end
+                local gpid = tostring(result.id_)
+                if gpid:match('^(%d+)') then
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    text = '- Username : @'..ap[2]..'\n- ID : ('..result.id_..')\n- Rank : '..t
+                  else
+                    text = '> یوزرنیم : @'..ap[2]..'\n> شناسه : ('..result.id_..')\n> مقام : '..t
+                  end
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    text = '- Username : @'..ap[2]..'\n- ID : ('..result.id_..')'
+                  else
+                    text = '> یوزرنیم : @'..ap[2]..'\n> شناسه : ('..result.id_..')'
+                  end
+                end
+              end
+              if not result.id_ then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = '> Username is not correct ! '
+                else
+                  text = '> یوزنیم صحیح نمیباشد  ! '
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+            end
+            resolve_username(ap[2],id_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('اخراج','Kick')
+          if text:match("^[Kk]ick$") and msg.reply_to_message_id_ ~= 0 then
+            function kick_reply(extra, result, success)
+              if not is_momod(result.sender_user_id_, result.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> User : '..result.sender_user_id_..' has been kicked !', 1, 'html')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..result.sender_user_id_..' اخراج شد !', 1, 'html')
+                end
+                chat_kick(result.chat_id_, result.sender_user_id_)
+              end
+            end
+            getMessage(msg.chat_id_,msg.reply_to_message_id_,kick_reply)
+          end
+          ---------------------------------------------------------
+          if text:match("^[Kk]ick @(.*)$") then
+            local ap = {string.match(text, "^([Kk]ick) @(.*)$")}
+            function ban_by_username(extra, result, success)
+              if result.id_ then
+                if not is_momod(result.id_, msg.chat_id_) then
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    texts = '> User : '..result.id_..' has been kicked !'
+                  else
+                    texts = '> کاربر با شناسه : '..result.id_..' اخراج گردید !'
+                  end
+                  chat_kick(msg.chat_id_, result.id_)
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  texts = '> User not found'
+                else
+                  texts = '> کاربر یافت نشد !'
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, texts, 1, 'html')
+            end
+            resolve_username(ap[2],ban_by_username)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Kk]ick (%d+)$") then
+            local ap = {string.match(text, "^([Kk]ick) (%d+)$")}
+            if not is_momod(ap[2], msg.chat_id_) then
+              chat_kick(msg.chat_id_, ap[2])
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> User : '..ap[2]..' has been kicked !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> کاربر با شناسه : '..ap[2]..' اخراج گردید !', 1, 'md')
+              end
+            end
+          end
+          ----------------------------------------------------------------------------------------------
+          if text:match("^[Ff]ilterlist$") or text:match("^لیست فیلتر$") then
+            local hash = 'bot:filters:'..msg.chat_id_
+            if hash then
+              local names = database:hkeys(hash)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                text = '> Filterlist : \n\n'
+              else
+                text = '> لیست کلمات فیلتر شده : \n\n'
+              end
+              for i=1, #names do
+                text = text..'> '..names[i]..'\n'
+              end
+              if #names == 0 then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = "> Filterlist is empty !"
+                else
+                  text = "> لیست کلمات فیلتر شده خالی است !"
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, text, 1, 'md')
+            end
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Ff]reelist$") or text:match("^لیست مجاز$") then
+            local hash = 'bot:freewords:'..msg.chat_id_
+            if hash then
+              local names = database:hkeys(hash)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                text = '> Freelist : \n\n'
+              else
+                text = '> لیست عنوان های مجاز : \n\n'
+              end
+              for i=1, #names do
+                text = text..'> '..names[i]..'\n'
+              end
+              if #names == 0 then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  text = "> Freelist is empty !"
+                else
+                  text = "> لیست عنوان های مجاز خالی است !"
+                end
+              end
+              send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+            end
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('اینوایت','Invite')
+          if text:match("^[Ii]nvite$") and msg.reply_to_message_id_ ~= 0 then
+            function inv_reply(extra, result, success)
+              add_user(result.chat_id_, result.sender_user_id_, 5)
+            end
+            getMessage(msg.chat_id_, msg.reply_to_message_id_,inv_reply)
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Ii]nvite @(.*)$") then
+            local ap = {string.match(text, "^([Ii]nvite) @(.*)$")}
+            function invite_by_username(extra, result, success)
+              if result.id_ then
+                add_user(msg.chat_id_, result.id_, 5)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  texts = '> User not found !'
+                else
+                  texts = '> کاربر یافت نشد !'
+                end
+                send(msg.chat_id_, msg.id_, 1, texts, 1, 'html')
+              end
+            end
+            resolve_username(ap[2],invite_by_username)
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Ii]nvite (%d+)$") then
+          local ap = {string.match(text, "^([Ii]nvite) (%d+)$")}
+          add_user(msg.chat_id_, ap[2], 5)
+        end
+        -----------------------------------------------------------------------------------------------
+        if msg.reply_to_message_id_ ~= 0 then
+          return ""
+        else
+          if text:match("^[Ii]d$") then
+            local user_msgs = database:get('user:msgs'..msg.chat_id_..':'..msg.sender_user_id_)
+            local function getproen(extra, result, success)
+              if database:get('getidstatus'..msg.chat_id_) == "Photo" then
+                if result.photos_[0] then
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[0].sizes_[1].photo_.persistent_id_,'- Your ID : '..msg.sender_user_id_..'\n- Number of messages : '..user_msgs,msg.id_,msg.id_)
+                  else
+                    sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[0].sizes_[1].photo_.persistent_id_,'> شناسه شما : '..msg.sender_user_id_..'\n> تعداد پیام های ارسالی شما : '..user_msgs,msg.id_,msg.id_)
+                  end
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "> You don't have profile photo !\n\n> Your ID : "..msg.sender_user_id_.."\n> Number of messages  : "..user_msgs, 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "> شما عکس پروفایل ندارید !\n\n> شناسه شما : "..msg.sender_user_id_.."\n> تعداد پیام های ارسالی شما : "..user_msgs, 1, 'md')
+                  end
+                end
+              end
+              if database:get('getidstatus'..msg.chat_id_) == "Simple" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> Your ID : "..msg.sender_user_id_.."\n> Number of messages : "..user_msgs, 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> شناسه شما : "..msg.sender_user_id_.."\n> تعداد پیام های ارسالی شما : "..user_msgs, 1, 'md')
+                end
+              end
+              if not database:get('getidstatus'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> Your ID : "..msg.sender_user_id_.."\n> Number of messages : "..user_msgs, 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> شناسه شما : "..msg.sender_user_id_.."\n> تعداد پیام های ارسالی شما : "..user_msgs, 1, 'md')
+                end
+              end
+            end
+            tdcli_function ({
+              ID = "GetUserProfilePhotos",
+              user_id_ = msg.sender_user_id_,
+              offset_ = 0,
+              limit_ = 1
+            }, getproen, nil)
+          end
+          if text:match("^آیدی$") then
+            local user_msgs = database:get('user:msgs'..msg.chat_id_..':'..msg.sender_user_id_)
+            local function getprofa(extra, result, success)
+              if database:get('getidstatus'..msg.chat_id_) == "Photo" then
+                if result.photos_[0] then
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[0].sizes_[1].photo_.persistent_id_,'> Your ID : '..msg.sender_user_id_..'\n> Number of messages : '..user_msgs,msg.id_,msg.id_)
+                  else
+                    sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[0].sizes_[1].photo_.persistent_id_,'> شناسه شما : '..msg.sender_user_id_..'\n> تعداد پیام های ارسالی شما : '..user_msgs,msg.id_,msg.id_)
+                  end
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "> You don't have profile photo !\n\n> Your ID : "..msg.sender_user_id_.."\n> Number of messages  : "..user_msgs, 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "> شما عکس پروفایل ندارید !\n\n> شناسه شما : "..msg.sender_user_id_.."\n> تعداد پیام های ارسالی شما : "..user_msgs, 1, 'md')
+                  end
+                end
+              end
+              if database:get('getidstatus'..msg.chat_id_) == "Simple" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> Your ID : "..msg.sender_user_id_.."\n> Number of messages : "..user_msgs, 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> شناسه شما : "..msg.sender_user_id_.."\n> تعداد پیام های ارسالی شما : "..user_msgs, 1, 'md')
+                end
+              end
+              if not database:get('getidstatus'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> Your ID : "..msg.sender_user_id_.."\n> Number of messages : "..user_msgs, 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> شناسه شما : "..msg.sender_user_id_.."\n> تعداد پیام های ارسالی شما : "..user_msgs, 1, 'md')
+                end
+              end
+            end
+            tdcli_function ({
+              ID = "GetUserProfilePhotos",
+              user_id_ = msg.sender_user_id_,
+              offset_ = 0,
+              limit_ = 1
+            }, getprofa, nil)
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        local text = msg.content_.text_:gsub('وضعیت دریافت عکس پروفایل','Getprofilestatus')
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Gg]etprofilestatus (.*)$") then
+            local status = {string.match(text, "^([Gg]etprofilestatus) (.*)$")}
+            if status[2] == "active" or status[2] == "فعال" then
+              if database:get('getpro:'..msg.chat_id_) == "Active" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Get profile photo is *already* actived ', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت دریافت عکس پروفایل از قبل بر روی حالت #فعال میباشد ! ', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Get profile photo has been changed to *active* ', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت دریافت عکس پروفایل بر روی حالت #فعال تنظیم شد !', 1, 'md')
+                end
+                database:set('getpro:'..msg.chat_id_,'Active')
+              end
+            end
+            if status[2] == "deactive" or status[2] == "غیرفعال" then
+              if database:get('getpro:'..msg.chat_id_) == "Deactive" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Get profile photo is *already* deactived', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت دریافت عکس پروفایل از قبل بر روی حالت #غیرفعال میباشد !', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, 'Get profile photo has been change to *deactive* !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت دریافت عکس پروفایل بر روی حالت #غیرفعال تنظیم شد !', 1, 'md')
+                end
+                database:set('getpro:'..msg.chat_id_,'Deactive')
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Gg]etpro (%d+)$") then
+          local pronumb = {string.match(text, "^([Gg]etpro) (%d+)$")}
+          local function gproen(extra, result, success)
+            if not is_momod(msg.sender_user_id_, msg.chat_id_) and database:get('getpro:'..msg.chat_id_) == "Deactive" then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, "> Get profile photo is deactive !", 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, "> دریافت عکس پروفایل غیرفعال شده است !", 1, 'md')
+              end
+            else
+              if pronumb[2] == '1' then
+                if result.photos_[0] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[0].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '2' then
+                if result.photos_[1] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[1].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 2 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 2 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '3' then
+                if result.photos_[2] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[2].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 3 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 3 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '4' then
+                if result.photos_[3] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[3].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 4 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 4 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '5' then
+                if result.photos_[4] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[4].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't 5 have profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 5 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '6' then
+                if result.photos_[5] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[5].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 6 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 6 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '7' then
+                if result.photos_[6] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[6].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 7 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 7 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '8' then
+                if result.photos_[7] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[7].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 8 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 8 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '9' then
+                if result.photos_[8] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[8].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 9 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 9 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '10' then
+                if result.photos_[9] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[9].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 10 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 10 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> I just can get last 10 profile photos !", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> من فقط میتوانم  10 عکس آخر را نمایش دهم !", 1, 'md')
+                end
+              end
+            end
+          end
+          tdcli_function ({
+            ID = "GetUserProfilePhotos",
+            user_id_ = msg.sender_user_id_,
+            offset_ = 0,
+            limit_ = pronumb[2]
+          }, gproen, nil)
+        end
+        if text:match("^عکس پروفایلم (%d+)$") then
+          local pronumb = {string.match(text, "^(عکس پروفایلم) (%d+)$")}
+          if not is_momod(msg.sender_user_id_, msg.chat_id_) and database:get('getpro:'..msg.chat_id_) == "Deactive" then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, "> Get profile photo is deactive !", 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, "> دریافت عکس پروفایل غیرفعال شده است !", 1, 'md')
+            end
+          else
+            local function gprofa(extra, result, success)
+              --vardump(result)
+              if pronumb[2] == '1' then
+                if result.photos_[0] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[0].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '2' then
+                if result.photos_[1] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[1].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 2 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 2 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '3' then
+                if result.photos_[2] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[2].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 3 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 3 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '4' then
+                if result.photos_[3] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[3].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 4 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 4 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '5' then
+                if result.photos_[4] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[4].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't 5 have profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 5 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '6' then
+                if result.photos_[5] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[5].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 6 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 6 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '7' then
+                if result.photos_[6] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[6].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 7 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 7 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '8' then
+                if result.photos_[7] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[7].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 8 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 8 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '9' then
+                if result.photos_[8] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[8].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 9 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 9 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              elseif pronumb[2] == '10' then
+                if result.photos_[9] then
+                  sendPhoto(msg.chat_id_, msg.id_, 0, 1, nil, result.photos_[9].sizes_[1].photo_.persistent_id_)
+                else
+                  if database:get('lang:gp:'..msg.chat_id_) then
+                    send(msg.chat_id_, msg.id_, 1, "You don't have 10 profile photo !", 1, 'md')
+                  else
+                    send(msg.chat_id_, msg.id_, 1, "شما 10 عکس پروفایل ندارید", 1, 'md')
+                  end
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> I just can get last 10 profile photos !", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> من فقط میتوانم  10 عکس آخر را نمایش دهم !", 1, 'md')
+                end
+              end
+            end
+          end
+          tdcli_function ({
+            ID = "GetUserProfilePhotos",
+            user_id_ = msg.sender_user_id_,
+            offset_ = 0,
+            limit_ = pronumb[2]
+          }, gprofa, nil)
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ll]ock (.*)$") or text:match("^قفل (.*)$") and is_momod(msg.sender_user_id_, msg.chat_id_) then
+            local lockpt = {string.match(text, "^([Ll]ock) (.*)$")}
+            local lockptf = {string.match(text, "^(قفل) (.*)$")}
+            if lockpt[2] == "edit" or lockptf[2] == "ویرایش پیام" then
+              if not database:get('editmsg'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Editing* `Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ویرایش پیام #فعال شد ! ', 1, 'md')
+                end
+                database:set('editmsg'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Editing* `Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ویرایش پیام از قبل #فعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if lockpt[2] == "cmd" or lockptf[2] == "حالت عدم جواب" then
+              if not database:get('bot:cmds'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Commands* `Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> حالت عدم جواب #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:cmds'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Commands* `Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> حالت عدم جواب از قبل #فعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if lockpt[2] == "bots" or lockptf[2] == "ربات" then
+              if not database:get('bot:bots:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Bots* `Protection Has Been Enabled` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ورود ربات #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:bots:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Bots* `Protection Is Already Enabled` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ورود ربات از قبل #فعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if lockpt[2] == "flood" or lockptf[2] == "فلود" then
+              if not database:get('anti-flood:'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Flooding* `Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فلود #فعال شد ! ', 1, 'md')
+                end
+                database:set('anti-flood:'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Flooding* `Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فلود از قبل #فعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if lockpt[2] == "pin" or lockptf[2] == "سنجاق پیام" then
+              if not database:get('bot:pin:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Pinning* `Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> قفل سنجاق پیام #فعال شد ! ", 1, 'md')
+                end
+                database:set('bot:pin:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Pinning* `Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> قفل سنجاق پیام از قبل #فعال است ! ", 1, 'md')
+                end
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        local text = msg.content_.text_:gsub('تنظیم فلود','Setflood')
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ss]etflood (%d+)$") then
+            local floodmax = {string.match(text, "^([Ss]etflood) (%d+)$")}
+            if tonumber(floodmax[2]) < 2 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Select a number greater than 2 !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> عددی بزرگتر از 2 وارد کنید !', 1, 'md')
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Flood sensitivity change to '..floodmax[2]..' !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> حساسیت فلود به '..floodmax[2]..' تنظیم شد !', 1, 'md')
+              end
+              database:set('flood:max:'..msg.chat_id_,floodmax[2])
+            end
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('وضعیت فلود','Setstatus')
+          if text:match("^[Ss]etstatus (.*)$") then
+            local status = {string.match(text, "^([Ss]etstatus) (.*)$")}
+            if status[2] == "kick" or status[2] == "اخراج" then
+              if database:get('floodstatus'..msg.chat_id_) == "Kicked" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Flood status is *already* on Kicked ', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت فلود از قبل بر روی حالت #اخراج میباشد ! ', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Flood status change to *Kicking* ', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت فلود بر روی حالت #اخراج تنظیم شد ! ', 1, 'md')
+                end
+                database:set('floodstatus'..msg.chat_id_,'Kicked')
+              end
+            end
+            if status[2] == "del" or status[2] == "حذف پیام" then
+              if database:get('floodstatus'..msg.chat_id_) == "DelMsg" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Flood status is *already* on Deleting !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت فلود از قبل بر روی حالت #حذف پیام میباشد !  ', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Flood status has been change to *Deleting* ! ', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت فلود بر روی حالت #حذف پیام تنظیم شد ! ', 1, 'md')
+                end
+                database:set('floodstatus'..msg.chat_id_,'DelMsg')
+              end
+            end
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('وضعیت دریافت آیدی','Getidstatus')
+          if text:match("^[Gg]etidstatus (.*)$") then
+            local status = {string.match(text, "^([Gg]etidstatus) (.*)$")}
+            if status[2] == "photo" or status[2] == "عکس" then
+              if database:get('getidstatus'..msg.chat_id_) == "Photo" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Get id status is *already* on Photo ', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت دریافت آیدی از قبل بر روی حالت #عکس میباشد ! ', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Get ID status has been changed to *Photo* ', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت دریافت آیدی بر روی حالت #عکس تنظیم شد ! ', 1, 'md')
+                end
+                database:set('getidstatus'..msg.chat_id_,'Photo')
+              end
+            end
+            if status[2] == "simple" or status[2] == "ساده" then
+              if database:get('getidstatus'..msg.chat_id_) == "Simple" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Get ID status is *already* on Simple ', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت دریافت آیدی از قبل بر روی حالت #ساده میباشد ! ', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, 'Get ID status has been change to *Simple* !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> وضعیت دریافت آیدی بر روی حالت #ساده تنظیم شد ! ', 1, 'md')
+                end
+                database:set('getidstatus'..msg.chat_id_,'Simple')
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_sudo(msg) then
+          local text = msg.content_.text_:gsub('خروج خودکار','Autoleave')
+          if text:match("^[Aa]utoleave (.*)$") then
+            local status = {string.match(text, "^([Aa]utoleave) (.*)$")}
+            if status[2] == "فعال" or status[2] == "on" then
+              if database:get('autoleave') == "On" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Auto Leave is now active !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> خروج خودکار از قبل فعال است ! ', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Auto Leave has been actived !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> خروج خودکار فعال شد !', 1, 'md')
+                end
+                database:set('autoleave','On')
+              end
+            end
+            if status[2] == "غیرفعال" or status[2] == "off" then
+              if database:get('autoleave') == "Off" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Auto Leave is now deactive !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> خروج خودکار از قبل غیرفعال میباشد !', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Auto leave has been deactived !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> خروج خودکار غیرفعال شد !', 1, 'md')
+                end
+                database:set('autoleave','Off')
+              end
+            end
+          end
+          -----------------------------------------------------------------------------------------------
+          local text = msg.content_.text_:gsub('منشی','Clerk')
+          if text:match("^[Cc]lerk (.*)$") then
+            local status = {string.match(text, "^([Cc]lerk) (.*)$")}
+            if status[2] == "فعال" or status[2] == "on" then
+              if database:get('clerk') == "On" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Clerk is now active !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> منشی از قبل فعال است ! ', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Clerk has been actived !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> منشی فعال شد !', 1, 'md')
+                end
+                database:set('clerk','On')
+              end
+            end
+            if status[2] == "غیرفعال" or status[2] == "off" then
+              if database:get('clerk') == "Off" then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Clerk is now deactive !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> منشی از قبل غیرفعال میباشد !', 1, 'md')
+                end
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Auto leave has been deactived !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> منشی غیرفعال شد !', 1, 'md')
+                end
+                database:set('clerk','Off')
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ss]etlink$") or text:match("^تنظیم لینک$") then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Plese send your group link now :', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> لطفا لینک گروه را ارسال نمایید :', 1, 'md')
+            end
+            database:set("bot:group:link"..msg.chat_id_, 'waiting')
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Ll]ink$") or text:match("^دریافت لینک$") then
+            local link = database:get("bot:group:link"..msg.chat_id_)
+            if link then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Group link :\n'..link, 1, 'html')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> لینک گروه :\n'..link, 1, 'html')
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Group link is not set ! \n Plese send command Setlink and set it 🌹', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> لینک گروه هنوز ذخیره نشده است ! \n لطفا با دستور Setlink آن را ذخیره کنید 🌹', 1, 'md')
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ww]elcome on$") or text:match("^خوش امدگویی روشن$") then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Welcome activated !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> خوش آمد گویی فعال شد !', 1, 'md')
+            end
+            database:set("bot:welcome"..msg.chat_id_,true)
+          end
+          if text:match("^[Ww]elcome off$") or text:match("^خوش امدگویی خاموش") then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Welcome deactivated !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> خوش آمد گویی غیرفعال شد !', 1, 'md')
+            end
+            database:del("bot:welcome"..msg.chat_id_)
+          end
+          if text:match("^[Ss]et welcome (.*)$") or text:match("^تنظیم متن خوش امدگویی (.*)$") then
+            local welcome = {string.match(text, "^([Ss]et welcome) (.*)$")}
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Welcome text has been saved !\n\nWelcome text :\n\n'..welcome[2], 1, 'html')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> پیام خوش آمد گویی ذخیره شد !\n\nمتن خوش آمد گویی :\n\n'..welcome[2], 1, 'html')
+            end
+            database:set('welcome:'..msg.chat_id_,welcome[2])
+          end
+          if text:match("^[Dd]el welcome$") or text:match("^حذف متن خوش امدگویی$") then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Welcome text has been removed !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> پیام خوش آمد گویی حذف شد !', 1, 'md')
+            end
+            database:del('welcome:'..msg.chat_id_)
+          end
+          if text:match("^[Gg]et welcome$") or text:match("^دریافت متن خوش امدگویی$") then
+            local wel = database:get('welcome:'..msg.chat_id_)
+            if wel then
+              send(msg.chat_id_, msg.id_, 1, wel, 1, 'md')
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Welcome text not found !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> پیامی در لیست نیست !', 1, 'md')
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_sudo(msg) then
+		  local text = msg.content_.text_:gsub('تنظیم متن منشی','Set clerk')
+          if text:match("^[Ss]et clerk (.*)$") then
+            local clerk = {string.match(text, "^([Ss]et clerk) (.*)$")}
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Clerk text has been saved !\nWelcome text :\n\n'..clerk[2], 1, 'html')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> پیام منشی ذخیره شد !\n\nمتن منشی :\n\n'..clerk[2], 1, 'html')
+            end
+            database:set('textsec',clerk[2])
+          end
+          if text:match("^[Dd]el clerk$") or text:match("^حذف متن منشی$") then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Clerk text has been removed !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> پیام منشی حذف شد !', 1, 'md')
+            end
+            database:del('textsec')
+          end
+          if text:match("^[Gg]et clerk$") or text:match("^دریافت متن منشی$") then
+            local cel = database:get('textsec')
+            if cel then
+              send(msg.chat_id_, msg.id_, 1, cel, 1, 'html')
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Clerk text not found !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> پیامی در لیست نیست !', 1, 'md')
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Aa]ction (.*)$") and is_sudo(msg) then
+          local lockpt = {string.match(text, "^([Aa]ction) (.*)$")}
+          if lockpt[2] == "typing" then
+            sendaction(msg.chat_id_, 'Typing')
+          end
+          if lockpt[2] == "video" then
+            sendaction(msg.chat_id_, 'RecordVideo')
+          end
+          if lockpt[2] == "voice" then
+            sendaction(msg.chat_id_, 'RecordVoice')
+          end
+          if lockpt[2] == "photo" then
+            sendaction(msg.chat_id_, 'UploadPhoto')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ff]ilter (.*)$") or text:match("^فیلتر (.*)$") then
+            local filters = {string.match(text, "^([Ff]ilter) (.*)$")}
+            local filterss = {string.match(text, "^(فیلتر) (.*)$")}
+            local name = string.sub(filters[2] or filterss[2], 1, 50)
+            local hash = 'bot:filters:'..msg.chat_id_
+            database:hset(hash, name,'newword')
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, "> Word [ "..name.." ] has been filtered !", 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, "> کلمه [ "..name.." ] فیلتر شد !", 1, 'md')
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Uu]nfilter (.*)$") or text:match("^حذف فیلتر (.*)$") then
+            local rws = {string.match(text, "^([Uu]nfilter) (.*)$")}
+            local rwss = {string.match(text, "^(حذف فیلتر) (.*)$")}
+            local name = string.sub(rws[2] or rwss[2], 1, 50)
+            local cti = msg.chat_id_
+            local hash = 'bot:filters:'..msg.chat_id_
+            if not database:hget(hash, name)then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, "> Word : ["..name.."] is not in filterlist !", 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, "> کلمه : ["..name.."] در لیست یافت نشد !", 1, 'md')
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, "> Word : ["..name.."] removed from filterlist !", 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, "> کلمه : ["..name.."] از لیست فیلتر حذف شد !", 1, 'md')
+              end
+              database:hdel(hash, name)
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ff]ree (.*)$") or text:match("^مجاز (.*)$") then
+            local filters = {string.match(text, "^([Ff]ree) (.*)$")}
+            local filterss = {string.match(text, "^(مجاز) (.*)$")}
+            local name = string.sub(filters[2] or filterss[2], 1, 50)
+            local hash = 'bot:freewords:'..msg.chat_id_
+            database:hset(hash, name,'newword')
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, "> Caption [ "..name.." ] has been freed !", 1, 'html')
+            else
+              send(msg.chat_id_, msg.id_, 1, "> عنوان [ "..name.." ] مجاز شد !", 1, 'html')
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Uu]nfree (.*)$") or text:match("^حذف مجاز (.*)$") then
+            local rws = {string.match(text, "^([Uu]nfree) (.*)$")}
+            local rwss = {string.match(text, "^(حذف مجاز) (.*)$")}
+            local name = string.sub(rws[2] or rwss[2], 1, 50)
+            local cti = msg.chat_id_
+            local hash = 'bot:freewords:'..msg.chat_id_
+            if not database:hget(hash, name)then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, "> Caption : ["..name.."] is not in freelist !", 1, 'html')
+              else
+                send(msg.chat_id_, msg.id_, 1, "> عنوان : ["..name.."] در لیست یافت نشد !", 1, 'html')
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, "> Caption : ["..name.."] removed from freelist !", 1, 'html')
+              else
+                send(msg.chat_id_, msg.id_, 1, "> عنوان : ["..name.."] از لیست مجاز حذف شد !", 1, 'html')
+              end
+              database:hdel(hash, name)
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Bb]roadcast (.*)$") and is_sudo(msg) or text:match("^ارسال همگانی (.*)$") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local gps = database:scard("bot:groups") or 0
+          local gpss = database:smembers("bot:groups") or 0
+          local rws = {string.match(text, "^([Bb]roadcast) (.*)$")}
+          local rwss = {string.match(text, "^(ارسال همگانی) (.*)$")}
+          local bib = rws[2] or rwss[2]
+          for i=1, #gpss do
+            send(gpss[i], 0, 1, bib, 1, 'md')
+          end
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> Your Message send to : '..gps..' groups !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> پیام مورد نظر شما به : '..gps..' گروه ارسال شد !', 1, 'md')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Ss]tats$") and is_sudo(msg) or text:match("^وضعیت ربات$") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local gps = database:scard("bot:groups")
+          local users = database:scard("bot:userss")
+          local allmgs = database:get("bot:allmsgs")
+          if database:get('autoleave') == "On" then
+            autoleaveen = "Active"
+            autoleavefa = "فعال"
+          elseif database:get('autoleave') == "Off" then
+            autoleaveen = "Deactive"
+            autoleavefa = "غیرفعال"
+          elseif not database:get('autoleave') then
+            autoleaveen = "Deactive"
+            autoleavefa = "غیرفعال"
+          end
+		  if database:get('clerk') == "On" then
+            clerken = "Active"
+            clerkfa = "فعال"
+          elseif database:get('clerk') == "Off" then
+            clerken = "Deactive"
+            clerkfa = "غیرفعال"
+          elseif not database:get('clerk') then
+            clerken = "Deactive"
+            clerkfa = "غیرفعال"
+          end
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> Status : \n\n> Groups : '..gps..'\n\n> Msg received  : '..allmgs..'\n\n> Auto Leave : '..autoleaveen..'\n\n> Clerk : '..clerken, 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> وضعیت ربات : \n\n> تعداد گروه ها : '..gps..'\n\n> تعداد پیام های دریافتی  : '..allmgs..'\n\n> خروج خودکار : '..autoleavefa..'\n\n> منشی : '..clerkfa, 1, 'md')
+          end
+        end
+        ------------------------------------------------------------------------------
+        if text:match("^[Rr]esgp$") and is_sudo(msg) or text:match("^بروزرسانی گروه های ربات$") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> Nubmper of groups bot has been update !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> تعداد گروه های ربات با موفقیت بروزرسانی گردید !', 'md')
+          end
+          database:del("bot:groups")
+        end
+        ------------------------------------------------------------------------------
+        if text:match("^[Nn]amegp$") and is_sudo(msg) or text:match("^دریافت نام گروه$") and is_momod(msg.sender_user_id_, msg.chat_id_) then
+          send(msg.chat_id_, msg.id_, 1, '> نام گروه : '..chat.title_, 1, 'md')
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Rr]esmsg$") and is_sudo(msg) or text:match("^شروع مجدد شمارش پیام دریافتی$") and is_sudo(msg) then
+          database:del("bot:allmsgs")
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> All msg received has been reset !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> شمارش پیام های دریافتی ، از نو شروع شد !', 1, 'md')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Ss]etlang (.*)$") and is_owner(msg.sender_user_id_, msg.chat_id_) or text:match("^تنظیم زبان (.*)$") and is_owner(msg.sender_user_id_, msg.chat_id_) then
+          local langs = {string.match(text, "^(.*) (.*)$")}
+          if langs[2] == "fa" or langs[2] == "فارسی" then
+            if not database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> زبان ربات هم اکنون بر روی فارسی قرار دارد !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> زبان ربات به فارسی تغییر پیدا کرد ! ', 1, 'md')
+              database:del('lang:gp:'..msg.chat_id_)
+            end
+          end
+          if langs[2] == "en" or langs[2] == "انگلیسی" then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Language Bot is *already* English', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> Language Bot has been changed to *English* !', 1, 'md')
+              database:set('lang:gp:'..msg.chat_id_,true)
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Uu]nlock (.*)$") or text:match("^بازکردن (.*)$") then
+            local unlockpt = {string.match(text, "^([Uu]nlock) (.*)$")}
+            local unlockpts = {string.match(text, "^(بازکردن) (.*)$")}
+            if unlockpt[2] == "edit" or unlockpts[2] == "ویرایش پیام" then
+              if database:get('editmsg'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Editing* `Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ویرایش پیام #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('editmsg'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Editing* `Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ویرایش پیام از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unlockpt[2] == "cmd" or unlockpts[2] == "حالت عدم جواب" then
+              if database:get('bot:cmds'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Commands* `Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> حالت عدم جواب #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:cmds'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Commands* `Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> حالت عدم جواب از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unlockpt[2] == "bots" or unlockpts[2] == "ربات" then
+              if database:get('bot:bots:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Bots* `Protection Has Been Disabled` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ورود ربات #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:bots:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Bots* `Protection Is Not Enabled` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ورود ربات از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unlockpt[2] == "flood" or unlockpts[2] == "فلود" then
+              if database:get('anti-flood:'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Flooding* `Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فلود #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('anti-flood:'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Flooding* `Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل قلود از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unlockpt[2] == "pin" or unlockpts[2] == "سنجاق پیام" then
+              if database:get('bot:pin:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "🔓 *Pinning* `Has Been Unlocked` 🔓", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> قفل سنجاق پیام #غیرفعال شد ! ", 1, 'md')
+                end
+                database:del('bot:pin:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "🔓 *Pinning* `Is Not Locked` 🔓", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> قفل سنجاق پیام از قبل #غیرفعال است ! ", 1, 'md')
+                end
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ll]ock gtime (%d+)$") then
+            local mutept = {string.match(text, "^[Ll]ock gtime (%d+)$")}
+            local hour = string.gsub(mutept[1], 'h', '')
+            local num1 = tonumber(hour) * 3600
+            local num = tonumber(num1)
+            database:setex('bot:muteall'..msg.chat_id_, num, true)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, "> Lock all has been enable for "..mutept[1].." hours !", 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, "> قفل گروه [ همه چیز ] به مدت "..mutept[1].." ساعت #فعال شد !", 'md')
+            end
+          end
+          if text:match("^قفل جی تایم (%d+)$") then
+            local mutept = {string.match(text, "^قفل جی تایم (%d+)$")}
+            local hour = string.gsub(mutept[1], 'h', '')
+            local num1 = tonumber(hour) * 3600
+            local num = tonumber(num1)
+            database:setex('bot:muteall'..msg.chat_id_, num, true)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, "> Lock all has been enable for "..mutept[1].." hours !", 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, "> قفل گروه [ همه چیز ] به مدت "..mutept[1].." ساعت #فعال شد !", 'md')
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ll]ock (.*)$") or text:match("^قفل (.*)$") then
+            local mutept = {string.match(text, "^([Ll]ock) (.*)$")}
+            local mutepts = {string.match(text, "^(قفل) (.*)$")}
+            if mutept[2] == "all" or  mutepts[2] == "گروه" then
+              if not database:get('bot:muteall'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *All* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل گروه [ همه چیز ] #فعال شد !', 1, 'md')
+                end
+                database:set('bot:muteall'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *All* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل گروه [ همه چیز ] از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "text" or mutepts[2] == "متن" then
+              if not database:get('bot:text:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Text* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل متن [ چت ] #فعال شد !', 1, 'md')
+                end
+                database:set('bot:text:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Text* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل متن [ چت ] از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "inline" or mutepts[2] == "دکمه شیشه ای" then
+              if not database:get('bot:inline:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Inline* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل دکمه شیشه ایی #فعال شد !', 1, 'md')
+                end
+                database:set('bot:inline:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Inline* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل دکمه شیشه ایی از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "photo" or mutepts[2] == "عکس" then
+              if not database:get('bot:photo:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Photo* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل عکس #فعال شد !', 1, 'md')
+                end
+                database:set('bot:photo:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Photo* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل عکس از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "spam" or mutepts[2] == "اسپم" then
+              if not database:get('bot:spam:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Spamming* `Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل اسپم #فعال شد !', 1, 'md')
+                end
+                database:set('bot:spam:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Spammin* `Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل اسپم از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "video" or mutepts[2] == "فیلم" then
+              if not database:get('bot:video:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Video* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فیلم #فعال شد !', 1, 'md')
+                end
+                database:set('bot:video:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Video* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فیلم از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "gif" or mutepts[2] == "گیف" then
+              if not database:get('bot:gifs:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Gif* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل گیف #فعال شد !', 1, 'md')
+                end
+                database:set('bot:gifs:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Gif* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل گیف از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "music" or mutepts[2] == "موزیک" then
+              if not database:get('bot:music:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Music* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل موزیک #فعال شد !', 1, 'md')
+                end
+                database:set('bot:music:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Music* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل موزیک از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "voice" or mutepts[2] == "ویس" then
+              if not database:get('bot:voice:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Voice* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ویس #فعال شد !', 1, 'md')
+                end
+                database:set('bot:voice:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Voice* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ویس از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "links" or mutepts[2] == "لینک" then
+              if not database:get('bot:links:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Link* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل لینک #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:links:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Link* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل لینک از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "location" or mutepts[2] == "موقعیت مکانی" then
+              if not database:get('bot:location:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Location* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل موقعیت مکانی #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:location:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Location* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل موقعیت مکانی از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "tag" or mutepts[2] == "تگ" then
+              if not database:get('tags:lock'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Tag* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل تگ #فعال شد ! ', 1, 'md')
+                end
+                database:set('tags:lock'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Tag* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل تگ از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "strict" or  mutepts[2] == "حالت سختگیرانه" then
+              if not database:get('bot:strict'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Strict* `Mode Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> حالت [ سختگیرانه ] #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:strict'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Strict* `Mode Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> حالت [ سختگیرانه ] از قبل #فعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "file" or mutepts[2] == "فایل" then
+              if not database:get('bot:document:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *File* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فایل #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:document:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *File* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فایل از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "hashtag" or mutepts[2] == "هشتگ" then
+              if not database:get('bot:hashtag:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Hashtag* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل هشتگ #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:hashtag:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Hashtag* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل هشتگ از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "contact" or mutepts[2] == "مخاطب" then
+              if not database:get('bot:contact:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Contact* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ارسال مخاطب #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:contact:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Contact* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ارسال مخاطب از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "webpage" or mutepts[2] == "صفحات اینترنتی" then
+              if not database:get('bot:webpage:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Webpage* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ارسال صفحه اینترنتی #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:webpage:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Webpage* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ارسال صفحه اینترنتی از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "farsi" or mutepts[2] == "نوشتار فارسی" then
+              if not database:get('bot:arabic:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Farsi* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل نوشتار فارسی #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:arabic:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Farsi* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل نوشتار فارسی از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "english" or mutepts[2] == "نوشتار انگلیسی" then
+              if not database:get('bot:english:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *English* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل نوشتار انگلیسی #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:english:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *English* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل نوشتار انگلیسی از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "sticker" or mutepts[2] == "استیکر" then
+              if not database:get('bot:sticker:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Sticker* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل استیکر #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:sticker:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Sticker* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل استیکر از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "markdown" or mutepts[2] == "مدل نشانه گذاری" then
+              if not database:get('markdown:lock'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Markdown* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل مدل نشانه گذاری #فعال شد ! ', 1, 'md')
+                end
+                database:set('markdown:lock'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Markdown* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل مدل نشانه گذاری از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "tgservice" or mutepts[2] == "سرویس تلگرام" then
+              if not database:get('bot:tgservice:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Tgservice* `Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل سرویس تلگرام #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:tgservice:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Tgservice* `Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل سرویس تلگرام از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+            if mutept[2] == "fwd" or mutepts[2] == "فروارد" then
+              if not database:get('bot:forward:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Forward* `Posting Has Been Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فروارد #فعال شد ! ', 1, 'md')
+                end
+                database:set('bot:forward:mute'..msg.chat_id_,true)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔐 *Forward* `Posting Is Already Locked` 🔐', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فروارد از قبل #فعال است !', 1, 'md')
+                end
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Uu]nlock (.*)$") or text:match("^بازکردن (.*)$") then
+            local unmutept = {string.match(text, "^([Uu]nlock) (.*)$")}
+            local unmutepts = {string.match(text, "^(بازکردن) (.*)$")}
+            if unmutept[2] == "all" or unmutept[2] == "gtime" or unmutepts[2] == "گروه" then
+              if database:get('bot:muteall'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *All* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل گروه [ همه چیز ] #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:muteall'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *All* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل گروه [ همه چیز ] از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "text" or unmutepts[2] == "متن" then
+              if database:get('bot:text:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Text* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل متن [ چت ] #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:text:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Text* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل متن [ چت ] از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "photo" or unmutepts[2] == "عکس" then
+              if database:get('bot:photo:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Photo* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل عکس #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:photo:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Photo* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل عکس از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "spam" or unmutepts[2] == "اسپم" then
+              if database:get('bot:spam:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Spamming* `Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل اسپم #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:spam:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Spamming* `Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل اسپم از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "video" or unmutepts[2] == "فیلم" then
+              if database:get('bot:video:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Video* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فیلم #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:video:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Video* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فیلم از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "file" or unmutepts[2] == "فایل" then
+              if database:get('bot:document:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *File* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فایل #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:document:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *File* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فایل از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "inline" or unmutepts[2] == "دکمه شیشه ای" then
+              if database:get('bot:inline:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Inline* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل دکمه شیشه ایی #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:inline:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Inline* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل دکمه شیشه ایی از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "markdown" or unmutepts[2] == "مدل نشانه گذاری" then
+              if database:get('markdown:lock'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Markdown* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل مدل نشانه گذاری #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('markdown:lock'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Markdown* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل مدل نشانه گذاری از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "gif" or unmutepts[2] == "گیف" then
+              if database:get('bot:gifs:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Gif* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل گیف #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:gifs:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Gif* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل گیف از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "music" or unmutepts[2] == "موزیک" then
+              if database:get('bot:music:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Music* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل موزیک #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:music:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Music* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل موزیک از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "voice" or unmutepts[2] == "ویس" then
+              if database:get('bot:voice:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Voice* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ویس #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:voice:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Voice* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ویس از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "links" or unmutepts[2] == "لینک" then
+              if database:get('bot:links:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Link* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل لینک #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:links:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Link* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل لینک از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "location" or unmutepts[2] == "موقعیت مکانی" then
+              if database:get('bot:location:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Location* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل موقعیت مکانی #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:location:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Location* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل موقعیت مکانی از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "tag" or unmutepts[2] == "تگ" then
+              if database:get('tags:lock'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Tag* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل تگ #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('tags:lock'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Tag* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل تگ از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "strict" or unmutepts[2] == "حالت سختگیرانه" then
+              if database:get('bot:strict'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Strict* `Mode Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> حالت [ سختگیرانه ] #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:strict'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Strict* `Mode Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> حالت [ سختگیرانه ] از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "hashtag" or unmutepts[2] == "هشتگ" then
+              if database:get('bot:hashtag:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Hashtag* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ارسال مخاطب #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:hashtag:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Hashtag* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل هشتگ از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "contact" or unmutepts[2] == "مخاطب" then
+              if database:get('bot:contact:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Contact* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل مخاطب #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:contact:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Contact* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, ' > قفل ارسال مخاطب از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "webpage" or unmutepts[2] == "صفحات اینترنتی" then
+              if database:get('bot:webpage:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Webpage* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ارسال صفحه اینترنتی #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:webpage:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Webpage* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل ارسال صفحه اینترنتی از قبل #غیرفعال است !', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "farsi" or unmutepts[2] == "نوشتار فارسی" then
+              if database:get('bot:arabic:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Farsi* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل نوشتار فارسی #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:arabic:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Farsi* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل نوشتار فارسی از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "english" or unmutepts[2] == "نوشتار انگلیسی" then
+              if database:get('bot:english:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *English* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل نوشتار انگلیسی #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:english:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *English* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل نوشتار انگلیسی از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "tgservice" or unmutepts[2] == "سرویس تلگرام" then
+              if database:get('bot:tgservice:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Tgservice* `Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل سرویس تلگرام #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:tgservice:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Tgservice* `Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل سرویس تلگرام از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "sticker" or unmutepts[2] == "استیکر" then
+              if database:get('bot:sticker:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Sticker* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل استیکر #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:sticker:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Sticker* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل استیکر از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+            if unmutept[2] == "fwd" or unmutepts[2] == "فروارد" then
+              if database:get('bot:forward:mute'..msg.chat_id_) then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Forward* `Posting Has Been Unlocked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فروارد #غیرفعال شد ! ', 1, 'md')
+                end
+                database:del('bot:forward:mute'..msg.chat_id_)
+              else
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '🔓 *Forward* `Posting Is Not Locked` 🔓', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> قفل فروارد از قبل #غیرفعال است ! ', 1, 'md')
+                end
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ss]etspam (%d+)$") then
+            local sensspam = {string.match(text, "^([Ss]etspam) (%d+)$")}
+            if tonumber(sensspam[2]) < 40 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Enter a number greater than 40 !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> عددی بزرگتر از 40 وارد کنید !', 1, 'md')
+              end
+            else
+              database:set('bot:sens:spam'..msg.chat_id_,sensspam[2])
+              if not database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> حساسیت اسپم به '..sensspam[2]..' کاراکتر تنظیم شد !\nجملاتی که بیش از '..sensspam[2]..' حرف داشته باشند ، حذف خواهند شد !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> Spam sensitivity has been set to [ ' ..sensspam[2]..' ] !\nSentences have over '..sensspam[2]..' character will delete !', 1, 'md')
+              end
+            end
+          end
+          if text:match("^تنظیم اسپم (%d+)$") then
+            local sensspam = {string.match(text, "^(تنظیم اسپم) (%d+)$")}
+            if tonumber(sensspam[2]) < 40 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Enter a number greater than 40 !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> عددی بزرگتر از 40 وارد کنید !', 1, 'md')
+              end
+            else
+              database:set('bot:sens:spam'..msg.chat_id_,sensspam[2])
+              if not database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> حساسیت اسپم به '..sensspam[2]..' کاراکتر تنظیم شد !\nجملاتی که بیش از '..sensspam[2]..' حرف داشته باشند ، حذف خواهند شد !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> Spam sensitivity has been set to [ ' ..sensspam[2]..' ] !\nSentences have over '..sensspam[2]..' character will delete !', 1, 'md')
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_sudo(msg) then
+          if text:match("^[Ee]dit (.*)$") then
+            local editmsg = {string.match(text, "^([Ee]dit) (.*)$")}
+            edit(msg.chat_id_, msg.reply_to_message_id_, nil, editmsg[2], 1, 'html')
+          end
+          if text:match("^ویرایش (.*)$") then
+            local editmsgs = {string.match(text, "^(ویرایش) (.*)$")}
+            edit(msg.chat_id_, msg.reply_to_message_id_, nil,editmsgs[2], 1, 'html')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Cc]lean (.*)$") or text:match("^پاکسازی (.*)$")then
+            local txt = {string.match(text, "^([Cc]lean) (.*)$")}
+            local txts = {string.match(text, "^(پاکسازی) (.*)$")}
+            if txt[2] == 'banlist' or txts[2] == 'لیست افراد مسدود' then
+              database:del('bot:banned:'..msg.chat_id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Banlist has been cleared !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> لیست افراد مسدود پاکسازی شد !', 1, 'md')
+              end
+            end
+            if is_sudo(msg) then
+              if txt[2] == 'banalllist' or txts[2] == 'لیست افراد تحت مسدودیت' then
+                database:del('bot:gban:')
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, '> Banlist has been cleared !', 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, '> لیست افراد مسدود پاکسازی شد !', 1, 'md')
+                end
+              end
+            end
+            if txt[2] == 'bots' or txts[2] == 'ربات ها' then
+              local function g_bots(extra,result,success)
+                local bots = result.members_
+                for i=0 , #bots do
+                  chat_kick(msg.chat_id_, bots[i].user_id_)
+                end
+              end
+              channel_get_bots(msg.chat_id_,g_bots)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> All bots has been removed from group !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> تمامی ربات ها از گروه پاکسازی شدند !', 1, 'md')
+              end
+            end
+            if txt[2] == 'modlist' or txts[2] == 'لیست مدیران گروه' then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Mod list has been cleared ', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> لیست مدیران گروه پاکسازی شد !', 1, 'md')
+              end
+              database:del('bot:momod:'..msg.chat_id_)
+            end
+            if txt[2] == 'voplist' or txts[2] == 'لیست عضو های ویژه' then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> VIP Members list has been cleared ', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> لیست اعضای ویژه پاکسازی شد !', 1, 'md')
+              end
+              database:del('bot:vipmem:'..msg.chat_id_)
+            end
+            if txt[2] == 'filterlist' or txts[2] == 'لیست فیلتر' then
+              local hash = 'bot:filters:'..msg.chat_id_
+              database:del(hash)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Filterlist has been cleared !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> لیست کلمات فیلتر شده پاکسازی شد !', 1, 'md')
+              end
+            end
+            if txt[2] == 'freelist' or txts[2] == 'لیست مجاز' then
+              local hash = 'bot:freewords:'..msg.chat_id_
+              database:del(hash)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Freelist has been cleared !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> لیست عنوان های مجاز پاکسازی شد !', 1, 'md')
+              end
+            end
+            if txt[2] == 'mutelist' or txts[2] == 'لیست افراد بی صدا' then
+              database:del('bot:muted:'..msg.chat_id_)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Muted users list has been cleared !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> لیست افراد بی صدا پاکسازی شد !', 1, 'md')
+              end
+            end
+          end
+        end
+
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ss]ettings$") or text:match("^تنظیمات$") then
+            if database:get('bot:muteall'..msg.chat_id_) then
+              mute_all = '#فعال'
+            else
+              mute_all = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:text:mute'..msg.chat_id_) then
+              mute_text = '#فعال'
+            else
+              mute_text = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:photo:mute'..msg.chat_id_) then
+              mute_photo = '#فعال'
+            else
+              mute_photo = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:video:mute'..msg.chat_id_) then
+              mute_video = '#فعال'
+            else
+              mute_video = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:gifs:mute'..msg.chat_id_) then
+              mute_gifs = '#فعال'
+            else
+              mute_gifs = '#غیرفعال'
+            end
+            ------------
+            if database:get('anti-flood:'..msg.chat_id_) then
+              mute_flood = '#فعال'
+            else
+              mute_flood = '#غیرفعال'
+            end
+            ------------
+            if not database:get('flood:max:'..msg.chat_id_) then
+              flood_m = 5
+            else
+              flood_m = database:get('flood:max:'..msg.chat_id_)
+            end
+            ------------
+            if not database:get('bot:sens:spam'..msg.chat_id_) then
+              spam_c = 250
+            else
+              spam_c = database:get('bot:sens:spam'..msg.chat_id_)
+            end
+            ------------
+            if database:get('floodstatus'..msg.chat_id_) == "DelMsg" then
+              floodstatus = "حذف پیام"
+            elseif database:get('floodstatus'..msg.chat_id_) == "Kicked" then
+              floodstatus = "اخراج"
+            elseif not database:get('floodstatus'..msg.chat_id_) then
+              floodstatus = "حذف پیام"
+            end
+            ----------------------------------------------------
+            if database:get('bot:music:mute'..msg.chat_id_) then
+              mute_music = '#فعال'
+            else
+              mute_music = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:bots:mute'..msg.chat_id_) then
+              mute_bots = '#فعال'
+            else
+              mute_bots = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:inline:mute'..msg.chat_id_) then
+              mute_in = '#فعال'
+            else
+              mute_in = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:cmds'..msg.chat_id_) then
+              mute_cmd = '#فعال'
+            else
+              mute_cmd = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:voice:mute'..msg.chat_id_) then
+              mute_voice = '#فعال'
+            else
+              mute_voice = '#غیرفعال'
+            end
+
+            ------------
+            if database:get('editmsg'..msg.chat_id_) then
+              mute_edit = '#فعال'
+            else
+              mute_edit = '#غیرفعال'
+            end
+
+            ------------
+            if database:get('bot:links:mute'..msg.chat_id_) then
+              mute_links = '#فعال'
+            else
+              mute_links = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:pin:mute'..msg.chat_id_) then
+              lock_pin = '#فعال'
+            else
+              lock_pin = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:sticker:mute'..msg.chat_id_) then
+              lock_sticker = '#فعال'
+            else
+              lock_sticker = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:tgservice:mute'..msg.chat_id_) then
+              lock_tgservice = '#فعال'
+            else
+              lock_tgservice = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:webpage:mute'..msg.chat_id_) then
+              lock_wp = '#فعال'
+            else
+              lock_wp = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:strict'..msg.chat_id_) then
+              strict = '#فعال'
+            else
+              strict = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:hashtag:mute'..msg.chat_id_) then
+              lock_htag = '#فعال'
+            else
+              lock_htag = '#غیرفعال'
+            end
+            ------------
+            if database:get('tags:lock'..msg.chat_id_) then
+              lock_tag = '#فعال'
+            else
+              lock_tag = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:location:mute'..msg.chat_id_) then
+              lock_location = '#فعال'
+            else
+              lock_location = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:contact:mute'..msg.chat_id_) then
+              lock_contact = '#فعال'
+            else
+              lock_contact = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:english:mute'..msg.chat_id_) then
+              lock_english = '#فعال'
+            else
+              lock_english = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:arabic:mute'..msg.chat_id_) then
+              lock_arabic = '#فعال'
+            else
+              lock_arabic = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:forward:mute'..msg.chat_id_) then
+              lock_forward = '#فعال'
+            else
+              lock_forward = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:document:mute'..msg.chat_id_) then
+              lock_file = '#فعال'
+            else
+              lock_file = '#غیرفعال'
+            end
+            ------------
+            if database:get('markdown:lock'..msg.chat_id_) then
+              markdown = '#فعال'
+            else
+              markdown = '#غیرفعال'
+            end
+            ------------
+            if database:get('bot:spam:mute'..msg.chat_id_) then
+              lock_spam = '#فعال'
+            else
+              lock_spam = '#غیرفعال'
+            end
+            ------------
+            if database:get("bot:welcome"..msg.chat_id_) then
+              send_welcome = '#فعال'
+            else
+              send_welcome = '#غیرفعال'
+            end
+            ------------
+            local TXTFA = "⚙ تنظیمات گروه ربات تلگرام گارد :\n\n"
+            .."> حالت سختگیرانه : "..strict.."\n"
+            .."> حالت قفل کلی گروه : "..mute_all.."\n"
+            .."> حالت عدم جواب : "..mute_cmd.."\n\n"
+            .."> قفل های اصلی :\n\n"
+            .."> قفل اسپم : "..lock_spam.."\n"
+            .."> قفل لینک : "..mute_links.."\n"
+            .."️> قفل آدرس اینترنتی :  "..lock_wp.."\n"
+            .."> قفل تگ : "..lock_tag.."\n"
+            .."️> قفل هشتگ : "..lock_htag.."\n"
+            .."> قفل فروارد : "..lock_forward.."\n"
+            .."> قفل ورود ربات :  "..mute_bots.."\n"
+            .."️> قفل ویرایش پیام :  "..mute_edit.."\n"
+            .."️> قفل سنجاق پیام : "..lock_pin.."\n"
+            .."> قفل دکمه شیشه ایی : "..mute_in.."\n"
+            .."> قفل نوشتار فارسی :  "..lock_arabic.."\n"
+            .."> قفل نوشتار انگلیسی : "..lock_english.."\n"
+            .."> قفل مدل نشانه گذاری : "..markdown.."\n"
+            .."️> قفل سرویس تلگرام : "..lock_tgservice.."\n"
+            .."> قفل فلود : "..mute_flood.."\n"
+            .."> وضعیت فلود : "..floodstatus.."\n"
+            .."> حساسیت فلود : [ "..flood_m.." ]\n"
+            .."️> حساسیت اسپم : [ "..spam_c.." ]\n\n"
+            .."> قفل های رسانه :\n\n"
+            .."> قفل متن [ چت ] : "..mute_text.."\n"
+            .."> قفل عکس : "..mute_photo.."\n"
+            .."> قفل فیلم : "..mute_video.."\n"
+            .."> قفل گیف : "..mute_gifs.."\n"
+            .."> قفل موزیک : "..mute_music.."\n"
+            .."> قفل ویس : "..mute_voice.."\n"
+            .."> قفل فایل : "..lock_file.."\n"
+            .."> قفل استیکر : "..lock_sticker.."\n"
+            .."> قفل ارسال مخاطب : "..lock_contact.."\n"
+            .."️> قفل موقعیت مکانی : "..lock_location.."\n\n"
+						..">➖➖➖➖➖➖➖\n"
+            ..">develop by `@sajjad_021`\n"
+            ..">tgChannel : @tgMember\n"
+            local TXTEN = "⚙ Group Settings for tgGuard robot :\n\n"
+            .."- *Group lock All* : "..mute_all.."\n"
+            .."- *Commands* : "..mute_cmd.."\n"
+            .."- *Strict Mode* : "..strict.."\n"
+            .."🔰 *General Settings* :\n\n"
+            .."- *Lock Links* : "..mute_links.."\n"
+            .."- *Lock Forward* : "..lock_forward.."\n"
+            .."- *Lock Web-Page* :  "..lock_wp.."\n"
+            .."- *Lock Tag* : "..lock_tag.."\n"
+            .."- *Lock Hashtag* : "..lock_htag.."\n"
+            .."- *Lock Spam* : "..lock_spam.."\n"
+            .."- *Lock Bots* :  "..mute_bots.."\n"
+            .."- *Lock Edit* :  "..mute_edit.."\n"
+            .."- *Lock Pin* : "..lock_pin.."\n"
+            .."- *Lock Inline* : "..mute_in.."\n"
+            .."- *Lock Farsi* :  "..lock_arabic.."\n"
+            .."- *Lock English* : "..lock_english.."\n"
+            .."- *Lock MarkDown* : "..markdown.."\n"
+            .."- *Lock TgService* : "..lock_tgservice.."\n"
+            .."- *Lock Flood* : "..mute_flood.."\n"
+            .."- *Flood Status* : "..floodstatus.."\n"
+            .."- *Flood Sensitivity* : [ "..flood_m.." ]\n"
+            .."- *Spam Sensitivity* : [ "..spam_c.." ]\n\n"
+            .."💠 *Media Settings* :\n\n"
+            .."- *Lock Text* : "..mute_text.."\n"
+            .."- *Lock Photo* : "..mute_photo.."\n"
+            .."- *Lock Videos* : "..mute_video.."\n"
+            .."- *Lock Gifs* : "..mute_gifs.."\n"
+            .."- *Lock Music* : "..mute_music.."\n"
+            .."- *Lock Voice* : "..mute_voice.."\n"
+            .."- *Lock File* : "..lock_file.."\n"
+            .."- *Lock Sticker* : "..lock_sticker.."\n"
+            .."- *Lock Contact* : "..lock_contact.."\n"
+            .."- *Lock location* : "..lock_location.."\n\n"
+						..">➖➖➖➖➖➖➖\n"
+            ..">develop by `@sajjad_021`\n"
+            ..">tgChannel : @tgMember\n"
+            TXTEN = TXTEN:gsub("#فعال","`|Enable|`")
+            TXTEN = TXTEN:gsub("#غیرفعال","`|Disable|`")
+            TXTEN = TXTEN:gsub("حذف پیام","Del")
+            TXTEN = TXTEN:gsub("اخراج","Kick")
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, TXTEN, 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, TXTFA, 1, 'md')
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Ee]cho (.*)$") and is_leader(msg) then
+          local txt = {string.match(text, "^([Ee]cho) (.*)$")}
+          send(msg.chat_id_,0, 1, txt[2], 1, 'md')
+          local id = msg.id_
+          local msgs = {[0] = id}
+          local chat = msg.chat_id_
+          delete_msg(chat,msgs)
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ss]etrules (.*)$") then
+            local txt = {string.match(text, "^([Ss]etrules) (.*)$")}
+            database:set('bot:rules'..msg.chat_id_, txt[2])
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Group rules has been saved !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> قوانین گروه تنظیم شد !', 1, 'md')
+            end
+          end
+          if text:match("^تنظیم قوانین (.*)$") then
+            local txt = {string.match(text, "^(تنظیم قوانین) (.*)$")}
+            database:set('bot:rules'..msg.chat_id_, txt[2])
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Group rules has been saved !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> قوانین گروه تنظیم شد !', 1, 'md')
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Nn]ote (.*)$") and is_leader(msg) then
+          local txt = {string.match(text, "^([Nn]ote) (.*)$")}
+          database:set('owner:note1', txt[2])
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> Saved !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> ذخیره شد !', 1, 'md')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Gg]etnote$") and is_leader(msg) then
+          local note = database:get('owner:note1')
+          send(msg.chat_id_, msg.id_, 1, note, 1, nil)
+        end
+        -------------------------------------------------------------------------------------------------
+        if text:match("^[Rr]ules$") or text:match("^دریافت قوانین$") then
+          local rules = database:get('bot:rules'..msg.chat_id_)
+          send(msg.chat_id_, msg.id_, 1, rules, 1, nil)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Ss]hare$") and is_sudo(msg) then
+          sendContact(msg.chat_id_, msg.id_, 0, 1, nil, 989216973112, 'My', 'Sudo', 194279067)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Rr]ename (.*)$") and is_owner(msg.sender_user_id_, msg.chat_id_) or text:match("^تنظیم نام گروه (.*)$") and is_owner(msg.sender_user_id_, msg.chat_id_) then
+          local txt = {string.match(text, "^([Rr]ename) (.*)$")}
+          local txt = {string.match(text, "^(تنظیم نام گروه) (.*)$")}
+          changetitle(msg.chat_id_, txt[2])
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> Group name has been changed !', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> نام گروه تغییر یافت !', 1, 'md')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Ss]etphoto$") and is_owner(msg.sender_user_id_, msg.chat_id_) or text:match("^تنظیم عکس گروه$") and is_owner(msg.sender_user_id_, msg.chat_id_) then
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> Plese send group photo :', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> لطفا عکس را ارسال کنید :', 1, 'md')
+          end
+          database:set('bot:setphoto'..msg.chat_id_..':'..msg.sender_user_id_,true)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Cc]harge (%d+)$") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local a = {string.match(text, "^([Cc]harge) (%d+)$")}
+          if a[2]:match("0") then
+            if not database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> عددی بزرگتر از 0 وارد نمایید !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> Enter a number greater than 0 !', 1, 'md')
+            end
+          else
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Group has been charged for '..a[2]..' day(s)!', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> گروه برای مدت '..a[2]..' روز شارژ شد !', 1, 'md')
+            end
+            local time = a[2] * day
+            database:setex("bot:charge:"..msg.chat_id_,time,true)
+            database:set("bot:enable:"..msg.chat_id_,true)
+          end
+        end
+        if text:match("^[Cc]harge [Uu]nit$") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          function unit(extra,result,success)
+            local v = tonumber(bot_owner) 
+            send(msg.chat_id_, msg.id_, 1, '> این گروه به صورت نامحدود شارژ شد !', 1, 'md')
+            send(v, 0, 1,'> همکار '..result.first_name_..' با شناسه : '..msg.sender_user_id_..' گروه با نام '..chat.title_..' را به صورت نامحدود شارژ کرد !', 1, 'md')
+            database:set("bot:charge:"..msg.chat_id_,true)
+            database:set("bot:enable:"..msg.chat_id_,true)
+          end
+          getUser(msg.sender_user_id_,unit)
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ee]xpire") or text:match("^اعتبار گروه") then
+            local ex = database:ttl("bot:charge:"..msg.chat_id_)
+            if ex == -1 then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> Unlimited !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> بدون محدودیت ( نامحدود ) !', 1, 'md')
+              end
+            else
+              local b = math.floor(ex / day ) + 1
+              if b == 0 then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> Credit Group has ended !", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> اعتبار گروه به پایان رسیده است !", 1, 'md')
+                end
+              else
+                local d = math.floor(ex / day ) + 1
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> Group have validity for "..d.." day(s)", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> گروه دارای "..d.." روز اعتبار میباشد ", 1, 'md')
+                end
+              end
+            end
+          end
+        end
+		        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Pp]in$") or text:match("^سنجاق کن$") and msg.reply_to_message_id_ == 0 then
+            local id = msg.id_
+            local msgs = {[0] = id}
+            pinmsg(msg.chat_id_,msg.reply_to_message_id_,'')
+            database:set('pinnedmsg'..msg.chat_id_, msg.reply_to_message_id_)
+			                if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> The message has been pinned !", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> پیام مورد نظر سنجاق شد ! ", 1, 'md')
+                end
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Uu]npin$") or text:match("^حذف سنجاق$") then
+            unpinmsg(msg.chat_id_)
+			             if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> The message has been unpinned !", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> پیام سنجاق شده از حالت سنجاق خارج شد !", 1, 'md')
+                end
+          end
+          -----------------------------------------------------------------------------------------------
+          if text:match("^[Rr]epin$") or text:match("^سنجاق مجدد$") then
+            local pin_id = database:get('pinnedmsg'..msg.chat_id_)
+            if pin_id then
+              pinmsg(msg.chat_id_,pin_id,0)
+             if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> The message has been repinned !", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> پیام سنجاق شده سابق مجدد سنجاق شد !", 1, 'md')
+                end
+				else
+				             if database:get('lang:gp:'..msg.chat_id_) then
+                  send(msg.chat_id_, msg.id_, 1, "> Message pinned the former was not found !", 1, 'md')
+                else
+                  send(msg.chat_id_, msg.id_, 1, "> پیام سنجاق شده سابق یافت نشد  !", 1, 'md')
+                end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Cc]harge stats (%d+)") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local txt = {string.match(text, "^([Cc]harge stats) (%d+)$")}
+          local ex = database:ttl("bot:charge:"..txt[2])
+          if ex == -1 then
+            send(msg.chat_id_, msg.id_, 1, '> بدون محدودیت ( نامحدود ) !', 1, 'md')
+          else
+            local d = math.floor(ex / day ) + 1
+            send(msg.chat_id_, msg.id_, 1, "> گروه دارای "..d.." روز اعتبار میباشد ", 1, 'md')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Ll]eave(-%d+)") and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local txt = {string.match(text, "^([Ll]eave)(-%d+)$")}
+          send(msg.chat_id_, msg.id_, 1, 'ربات با موفقیت از گروه '..txt[2]..' خارج شد.', 1, 'md')
+          if database:get('lang:gp:'..txt[2]) then
+            send(txt[2], 0, 1, '⚠️ *The robot for some reason left the band!*\n*For more information, stay tuned to support* ✅', 1, 'html')
+          else
+            send(txt[2], 0, 1, '⚠️ ربات به دلایلی گروه را ترک میکند\nبرای اطلاعات بیشتر میتوانید با پشتیبانی در ارتباط باشید ✅', 1, 'html')
+          end
+          chat_leave(txt[2], bot_id)
+          database:srem("bot:groups",txt[2])
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match('^[Pp]lan1(-%d+)') and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local txt = {string.match(text, "^([Pp]lan1)(-%d+)$")}
+          local timeplan1 = 2592000
+          database:setex("bot:charge:"..txt[2],timeplan1,true)
+          send(msg.chat_id_, msg.id_, 1, 'پلن 1 با موفقیت برای گروه '..txt[2]..' فعال شد\nاین گروه تا 30 روز دیگر اعتبار دارد! ( 1 ماه )', 1, 'md')
+          database:set("bot:enable:"..txt[2],true)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match('^[Pp]lan2(-%d+)') and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local txt = {string.match(text, "^([Pp]lan2)(-%d+)$")}
+          local timeplan2 = 7776000
+          database:setex("bot:charge:"..txt[2],timeplan2,true)
+          send(msg.chat_id_, msg.id_, 1, 'پلن 2 با موفقیت برای گروه '..txt[2]..' فعال شد\nاین گروه تا 90 روز دیگر اعتبار دارد! ( 3 ماه )', 1, 'md')
+          database:set("bot:enable:"..txt[2],true)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match('^[Pp]lan3(-%d+)') and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local txt = {string.match(text, "^([Pp]lan3)(-%d+)$")}
+          database:set("bot:charge:"..txt[2],true)
+          send(msg.chat_id_, msg.id_, 1, 'پلن 3 با موفقیت برای گروه '..txt[2]..' فعال شد\nاین گروه به صورت نامحدود شارژ شد!', 1, 'md')
+          database:set("bot:enable:"..txt[2],true)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match('^[Aa]dd$') and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          function adding(extra,result,success)
+            local txt = {string.match(text, "^([Aa]dd)$")}
+            if database:get("bot:enable:"..msg.chat_id_) then
+              if not database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, ' گروه از قبل در لیست مدیریتی ربات میباشد !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> This group is already in list management !', 1, 'md')
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '> This group has been added to list management !', 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> گروه به لیست مدیریتی ربات اضافه شد !', 1, 'md')
+              end
+              send(bot_owner, 0, 1, '> گروه جدیدی به لیست مدیریتی ربات اضافه شد !\n\n🌀 مشخصات همکار اضافه کننده :\n🔸آیدی همکار : '..msg.sender_user_id_..'\n🔸نام همکار : '..result.first_name_..'\n\n🌀مشخصات گروه :\n🔸 آیدی گروه : '..msg.chat_id_..'\n🔸نام گروه : '..chat.title_..'\n\n🔹اگر میخواهید ربات گروه را ترک کند از دستور زیر استفاده کنید : \n\n🔖 leave'..msg.chat_id_..'\n\n🔸اگر قصد وارد شدن به گروه را دارید از دستور زیر استفاده کنید : \n\n🔖 join'..msg.chat_id_..'\n\n🔅🔅🔅🔅🔅🔅\n\n📅 اگر قصد تمدید گروه را دارید از دستورات زیر استفاده کنید : \n\n⭕️برای شارژ به صورت یک ماه :\n🔖 plan1'..msg.chat_id_..'\n\n⭕️برای شارژ به صورت سه ماه :\n🔖 plan2'..msg.chat_id_..'\n\n⭕️برای شارژ به صورت نامحدود :\n🔖 plan3'..msg.chat_id_..'\n' , 1, 'html')
+              database:set("bot:enable:"..msg.chat_id_,true)
+              database:setex("bot:charge:"..msg.chat_id_,86400,true)
+              database:sadd('sudo:data:'..msg.sender_user_id_, msg.chat_id_)
+            end
+          end
+          getUser(msg.sender_user_id_,adding)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match('^[Rr]em$') and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local txt = {string.match(text, "^([Rr]em)$")}
+          if not database:get("bot:enable:"..msg.chat_id_) then
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Group is not in list management !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> گروه در لیست مدیریتی ربات نیست !', 1, 'md')
+            end
+          else
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '> Group has been removed from list management !', 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> گروه از لیست مدیریتی ربات حذف شد !', 1, 'md')
+            end
+            database:del("bot:charge:"..msg.chat_id_)
+            database:del("bot:enable:"..msg.chat_id_)
+            database:srem('sudo:data:'..msg.sender_user_id_, msg.chat_id_)
+            local v = tonumber(bot_owner)
+            send(v, 0, 1, "⭕️ گروهی با مشخصات زیر از لیست مدیریتی حذف شد !\n\n 🌀مشخصات فرد حذف کننده : \n 🔹آیدی فرد : "..msg.sender_user_id_.."\n\n 🌀مشخصات گروه :\n 🔸آیدی گروه : "..msg.chat_id_.."\n 🔸نام گروه : "..chat.title_ , 1, 'md')
+          end
+        end
+        if text:match('^[Rr]em(-%d+)$') and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local gp = {string.match(text, "^([Rr]em)(-%d+)$")}
+          database:del("bot:charge:"..gp[2])
+          local v = tonumber(bot_owner)
+          send(msg.chat_id_, msg.id_, 1, '> گروه با شناسه '..gp[2]..' از لیست مدیریتی ربات حذف شد !', 1, 'md')
+          send(v, 0, 1, "⭕️ گروهی با مشخصات زیر از لیست مدیریتی حذف شد !\n\n 🌀مشخصات فرد حذف کننده : \n 🔹آیدی فرد : "..msg.sender_user_id_.."\n\n 🌀مشخصات گروه :\n 🔸آیدی گروه : "..gp[2] , 1, 'md')
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match('^[Ss]erverinfo') and is_sudo(msg) then
+          local s = io.popen("sh ./data.sh")
+          local text = ( s:read("*a") )
+          send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+        end
+        ----------------------------------------------------------------------------------------------
+        if text:match('^[Dd]ata (%d+)') and is_sudo(msg) then
+          local txt = {string.match(text, "^([Dd]ata) (%d+)$")}
+          local hash =  'sudo:data:'..txt[2]
+          local list = database:smembers(hash)
+          if tonumber(txt[2]) == 194279067 then
+            name = "─ঊ与дﾌ╰,.,╯ﾌдঊ─"
+           else
+            name = "─ঊτGυαяδ™ঊ─"
+						--elseif txt[2] == 180191663 then
+            --name = "─ঊτGυαяδ™ঊ─"
+           --elseif txt[2] == 279700027 then
+            --name = "─ঊτGυαяδ™ঊ─"
+            --elseif txt[2] ==
+            --name =
+            --elseif txt[2] ==
+            --name =
+          end
+          local text = " > اطلاعات همکار : \n\n نام : "..name.."\n\n  گروه های اضافه شده توسط این فرد :\n\n"
+          for k,v in pairs(list) do
+            text = text..'\n'..k.." : "..v.."\n"
+          end
+          if #list == 0 then
+            text = "> اطلاعات همکار : \n\n نام : "..name.." \n\n تا به حال گروهی به ربات اضافه نکرده است "
+          end
+          send(msg.chat_id_, msg.id_, 1, text, 1, 'html')
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match('^[Aa]ddgp (%d+) (-%d+)') and is_leader(msg) then
+          local txt = {string.match(text, "^([Aa]ddgp) (%d+) (-%d+)$")}
+          local sudo = txt[2]
+          local gp = txt[3]
+          send(msg.chat_id_, msg.id_, 1, "> گروه مورد نظر با موفقیت به لیست گروه های همکار با شناسه : "..txt[2].." #اضافه شد", 1, 'html')
+          database:sadd('sudo:data:'..sudo, gp)
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match('^[Rr]emgp (%d+) (-%d+)') and is_leader(msg) then
+          local txt = {string.match(text, "^([Rr]emgp) (%d+) (-%d+)$")}
+          local hash = 'sudo:data:'..txt[2]
+          local gp = txt[3]
+          send(msg.chat_id_, msg.id_, 1, "> گروه مورد نظر با موفقیت از لیست گروه های همکار با شناسه : "..txt[2].." #حذف شد", 1, 'html')
+          database:srem(hash, gp)
+        end
+        -----------------------------------------------------------------------------------
+        if text:match('^[Jj]oin(-%d+)') and is_admin(msg.sender_user_id_, msg.chat_id_) then
+          local txt = {string.match(text, "^([Jj]oin)(-%d+)$")}
+          send(msg.chat_id_, msg.id_, 1, 'باموفقیت شما را به گروه '..txt[2]..' اضافه کردم !', 1, 'md')
+          add_user(txt[2], msg.sender_user_id_, 20)
+        end
+        ------------------------------------------------------------------------------------
+        if text:match('^[Mm]eld(-%d+)') and is_sudo(msg) then
+          local meld = {string.match(text, "^([Mm]eld)(-%d+)$")}
+          send(msg.chat_id_, msg.id_, 1, '> با موفقیت در گروه مورد نظر اعلام گردید !', 1, 'md')
+          if database:get('lang:gp:'..meld[2]) then
+            send(meld[2], 0, 1, '⚠️ *Dear Manager :\n\nCredibility of this group is over !\n\nPlease visit as soon as possible to recharge the robot support* !', 1, 'md')
+          else
+            send(meld[2], 0, 1, '⚠️_ مدیران گرامی :\n\nاعتبار این گروه به پایان رسیده است !\n\nلطفا هرچه سریع تر برای شارژ مجدد به پشتیبانی ربات مراجعه فرمایید !_', 1, 'md')
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match('^[Dd]el (%d+)$') then
+            local matches = {string.match(text, "^([Dd]el) (%d+)$")}
+            if msg.chat_id_:match("^-100") then
+              if tonumber(matches[2]) > 100 or tonumber(matches[2]) < 1 then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  pm = '> Please use a number greater than 1 and less than 100 !'
+                else
+                  pm = '> لطفا از عددی بزرگتر از 1 و کوچکتر از 100 استفاده کنید !'
+                end
+                send(msg.chat_id_,0, 1, pm, 1, 'html')
+              else
+                tdcli_function ({
+                  ID = "GetChatHistory",
+                  chat_id_ = msg.chat_id_,
+                  from_message_id_ = 0,
+                  offset_ = 0,
+                  limit_ = tonumber(matches[2])
+                }, delmsg, nil)
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  pm ='> *'..matches[2]..' recent message removed*!'
+                else
+                  pm ='> '..matches[2]..' پیام اخیر حذف شد !'
+                end
+                send(msg.chat_id_,0, 1, pm, 1, 'html')
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                pm ='> This is not possible in the conventional group !'
+              else
+                pm ='> در گروه معمولی این امکان وجود ندارد !'
+              end
+              send(msg.chat_id_, msg.id_, 1, pm, 1, 'html')
+            end
+          end
+          if text:match('^پاکسازی (%d+)$') then
+            local matches = {string.match(text, "^(پاکسازی) (%d+)$")}
+            if msg.chat_id_:match("^-100") then
+              if tonumber(matches[2]) > 100 or tonumber(matches[2]) < 1 then
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  pm = '> Please use a number greater than 1 and less than 100 !'
+                else
+                  pm = '> لطفا از عددی بزرگتر از 1 و کوچکتر از 100 استفاده کنید !'
+                end
+                send(msg.chat_id_,0, 1, pm, 1, 'html')
+              else
+                tdcli_function ({
+                  ID = "GetChatHistory",
+                  chat_id_ = msg.chat_id_,
+                  from_message_id_ = 0,
+                  offset_ = 0,
+                  limit_ = tonumber(matches[2])
+                }, delmsg, nil)
+                if database:get('lang:gp:'..msg.chat_id_) then
+                  pm ='> *'..matches[2]..' recent message removed*!'
+                else
+                  pm ='> '..matches[2]..' پیام اخیر حذف شد !'
+                end
+                send(msg.chat_id_,0, 1, pm, 1, 'html')
+              end
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                pm ='> This is not possible in the conventional group !'
+              else
+                pm ='> در گروه معمولی این امکان وجود ندارد !'
+              end
+              send(msg.chat_id_, msg.id_, 1, pm, 1, 'html')
+            end
+          end
+        end
+        ----------------------------------------------------------------------------------------------
+        if text:match("^[Mm]e$") then
+          function get_me(extra,result,success)
+            if is_leaderid(result.id_) then
+              ten = 'Chief'
+              tfa = 'مدیر کل'
+            elseif is_sudoid(result.id_) then
+              ten = 'Sudo'
+              tfa = 'مدیر ربات'
+            elseif is_admin(result.id_) then
+              ten = 'Bot Admin'
+              tfa = 'ادمین ربات'
+            elseif is_owner(result.id_, msg.chat_id_) then
+              ten = 'Owner'
+              tfa = 'صاحب گروه'
+            elseif is_momod(result.id_, msg.chat_id_) then
+              ten = '*Group Admin*'
+              tfa = 'مدیر گروه'
+            else
+              ten = 'Member'
+              tfa = 'کاربر'
+            end
+            if result.username_ then
+              username = '@'..result.username_
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                username = 'Not Found'
+              else
+                username = 'یافت نشد'
+              end
+            end
+            if result.last_name_ then
+              lastname = result.last_name_
+            else
+              lastname = ''
+            end
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '- *Your Name* : '..result.first_name_..' '..lastname..'\n- *Your Username* : '..username..'\n- *Your ID* : '..result.id_..'\n- *Your Rank* : '..ten, 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> نام شما : '..result.first_name_..' '..lastname..'\n> یوزرنیم شما : '..username..'\n> شناسه شما : '..result.id_..'\n> مقام شما : '..tfa, 1, 'html')
+            end
+          end
+          getUser(msg.sender_user_id_,get_me)
+        end
+        if text:match("^اطلاعات من$") then
+          function get_me(extra,result,success)
+            if is_leaderid(result.id_) then
+              ten = 'Chief'
+              tfa = 'مدیر کل'
+            elseif is_sudoid(result.id_) then
+              ten = 'Sudo'
+              tfa = 'مدیر ربات'
+            elseif is_admin(result.id_) then
+              ten = 'Bot Admin'
+              tfa = 'ادمین ربات'
+            elseif is_owner(result.id_, msg.chat_id_) then
+              ten = 'Owner'
+              tfa = 'صاحب گروه'
+            elseif is_momod(result.id_, msg.chat_id_) then
+              ten = '*Group Admin*'
+              tfa = 'مدیر گروه'
+            else
+              ten = 'Member'
+              tfa = 'کاربر'
+            end
+            if result.username_ then
+              username = '@'..result.username_
+            else
+              if database:get('lang:gp:'..msg.chat_id_) then
+                username = 'Not Found'
+              else
+                username = 'یافت نشد'
+              end
+            end
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, '- *Your Name* : '..result.first_name_..'\n- *Your Username* : '..username..'\n- *Your ID* : '..result.id_..'\n- *Your Rank* : '..ten, 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, '> نام شما : '..result.first_name_..'\n> یوزرنیم شما : '..username..'\n> شناسه شما : '..result.id_..'\n> مقام شما : '..tfa, 1, 'html')
+            end
+          end
+          getUser(msg.sender_user_id_,get_me)
+        end
+        -----------------------------------------------------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Ww]hois (.*)$") then
+            local memb = {string.match(text, "^([Ww]hois) (.*)$")}
+            function whois(extra,result,success)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '- *Name* :'..result.first_name_..'\n- *Username* : @'..result.username_..'\n- *ID* : '..msg.sender_user_id_, 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> نام : '..result.first_name_..'\n> یوزرنیم : @'..result.username_..'\n> شناسه : '..msg.sender_user_id_, 1, 'html')
+              end
+            end
+            getUser(memb[2],whois)
+          end
+          if text:match("^اطلاعات (.*)$") then
+            local memb = {string.match(text, "^(اطلاعات) (.*)$")}
+            function whois(extra,result,success)
+              if database:get('lang:gp:'..msg.chat_id_) then
+                send(msg.chat_id_, msg.id_, 1, '- *Name* :'..result.first_name_..'\n- *Username* : @'..result.username_..'\n- *ID* : '..msg.sender_user_id_, 1, 'md')
+              else
+                send(msg.chat_id_, msg.id_, 1, '> نام : '..result.first_name_..'\n> یوزرنیم : @'..result.username_..'\n> شناسه : '..msg.sender_user_id_, 1, 'html')
+              end
+            end
+            getUser(memb[2],whois)
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Gg]view$") or text:match("^میزان بازدید$") then
+          database:set('bot:viewget'..msg.sender_user_id_,true)
+          if database:get('lang:gp:'..msg.chat_id_) then
+            send(msg.chat_id_, msg.id_, 1, '> Plese forward your post : ', 1, 'md')
+          else
+            send(msg.chat_id_, msg.id_, 1, '> لطفا مطلب خود را فروراد کنید : ', 1, 'md')
+          end
+        end				
+	 ---------------------------------------------------
+      if text:match("^[Ss]ettings$") or text:match("^[Hh]elp$") then
+          function inline(arg,data)
+          tdcli_function({
+        ID = "SendInlineQueryResultMessage",
+        chat_id_ = msg.chat_id_,
+        reply_to_message_id_ = msg.id_,
+        disable_notification_ = 0,
+        from_background_ = 1,
+        query_id_ = data.inline_query_id_,
+        result_id_ = data.results_[0].id_
+      }, dl_cb, nil)
+            end
+          tdcli_function({
+      ID = "GetInlineQueryResults",
+      bot_user_id_ = 364959406,  --[[enter api bot id here]]
+      chat_id_ = msg.chat_id_,
+      user_location_ = {
+        ID = "Location",
+        latitude_ = 0,
+        longitude_ = 0
+      },
+      query_ = tostring(msg.chat_id_),
+      offset_ = 0
+    }, inline, nil)
+       end
+    ---------------------------------------Help Bot------------------------------------------------
+        if is_momod(msg.sender_user_id_, msg.chat_id_) then
+          if text:match("^[Hh]elp$") or text:match("^راهنما$") then
+            local help = io.open("./Help/help.txt", "r")
+            local helpen = io.open("./Help/helpen.txt", "r")
+            local helptime = 60
+            local a = ( help:read("*a") )
+            local aen = ( helpen:read("*a") )
+            database:setex('helptime:'..msg.chat_id_, helptime, true)
+            if database:get('lang:gp:'..msg.chat_id_) then
+              send(msg.chat_id_, msg.id_, 1, aen, 1, 'md')
+            else
+              send(msg.chat_id_, msg.id_, 1, a, 1, 'md')
+            end
+          end
+          if database:get('helptime:'..msg.chat_id_) then
+            if is_momod(msg.sender_user_id_, msg.chat_id_) then
+              if database:get('lang:gp:'..msg.chat_id_) then
+                local helplocken = io.open("./Help/helplocken.txt", "r")
+                local helpmediaen = io.open("./Help/helpmediaen.txt", "r")
+                local helpsetlinken = io.open("./Help/helpsetlinken.txt", "r")
+                local helpprodemoen = io.open("./Help/helpprodemoen.txt", "r")
+                local helpjanebien = io.open("./Help/helpjanebien.txt", "r")
+                local helpspamflooden = io.open("./Help/helpfloodspamen.txt", "r")
+                local helpvaziaten = io.open("./Help/helpvaziaten.txt", "r")
+                if text:match("^1$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local b = ( helpvaziaten:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, b, 1, 'md')
+                elseif text:match("^2$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local c = ( helplocken:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, c, 1, 'md')
+                elseif text:match("^3$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local d = ( helpmediaen:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, d, 1, 'md')
+                elseif text:match("^4$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local e = ( helpspamflooden:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, e, 1, 'md')
+                elseif text:match("^5$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local f = ( helpprodemoen:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, f, 1, 'md')
+                elseif text:match("^6$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local g = ( helpsetlinken:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, g, 1, 'md')
+                elseif text:match("^7$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local h = ( helpjanebien:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, h, 1, 'md')
+                elseif text:match("^0$") then
+                  send(msg.chat_id_, msg.id_, 1, '> The operation was canceled !', 1, 'md')
+                  database:del('help:'..msg.chat_id_)
+                else
+                  if text:match("^%d+$") then
+                    send(msg.chat_id_, msg.id_, 1, '> Your number is not in the list!', 1, 'md')
+                    database:del('help:'..msg.chat_id_)
+                  end
+                end
+              end
+              if not database:get('lang:gp:'..msg.chat_id_) then
+                local helplock = io.open("./Help/helplock.txt", "r")
+                local helpmedia = io.open("./Help/helpmedia.txt", "r")
+                local helpsetlink = io.open("./Help/helpsetlink.txt", "r")
+                local helpprodemo = io.open("./Help/helpprodemo.txt", "r")
+                local helpjanebi = io.open("./Help/helpjanebi.txt", "r")
+                local helpspamflood = io.open("./Help/helpfloodspam.txt", "r")
+                local helpvaziat = io.open("./Help/helpvaziat.txt", "r")
+                if text:match("^1$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local b = ( helpvaziat:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, b, 1, 'md')
+                elseif text:match("^2$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local c = ( helplock:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, c, 1, 'md')
+                elseif text:match("^3$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local d = ( helpmedia:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, d, 1, 'md')
+                elseif text:match("^4$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local e = ( helpspamflood:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, e, 1, 'md')
+                elseif text:match("^5$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local f = ( helpprodemo:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, f, 1, 'md')
+                elseif text:match("^6$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local g = ( helpsetlink:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, g, 1, 'md')
+                elseif text:match("^7$") then
+                  database:del('helptime:'..msg.chat_id_)
+                  local h = ( helpjanebi:read("*a") )
+                  send(msg.chat_id_, msg.id_, 1, h, 1, 'md')
+                elseif text:match("^0$") then
+                  send(msg.chat_id_, msg.id_, 1, '> عملیات لغو گردید !', 1, 'md')
+                  database:del('help:'..msg.chat_id_)
+                else
+                  if text:match("^%d+$") then
+                    send(msg.chat_id_, msg.id_, 1, '> شماره مورد نظر شما در لیست موجود نمیباشد !', 1, 'md')
+                  end
+                end
+              end
+            end
+          end
+        end
+        -----------------------------------------------------------------------------------------------
+        if text:match("^[Pp]ayping$") and is_sudo(msg) then
+          send(msg.chat_id_, msg.id_, 1, 'https://zarinp.al/tgmember', 1, 'html')
+        end
+      end
+      -----------------------------------------------------------------------------------------------
+    end
+    -----------------------------------------------------------------------------------------------
+    -- END CODE --
+    -- Number Update 5
+    -----------------------------------------------------------------------------------------------
+  elseif (data.ID == "UpdateChat") then
+    chat = data.chat_
+    chats[chat.id_] = chat
+    -----------------------------------------------------------------------------------------------
+  elseif (data.ID == "UpdateMessageEdited") then
+    local msg = data
+    function get_msg_contact(extra, result, success)
+      local text = (result.content_.text_ or result.content_.caption_)
+      if result.id_ and result.content_.text_ then
+        database:set('bot:editid'..result.id_,result.content_.text_)
+      end
+      if not is_vipmem(result.sender_user_id_, result.chat_id_) then
+        check_filter_words(result, text)
+        if database:get('editmsg'..msg.chat_id_) then
+          local msgs = {[0] = data.message_id_}
+          delete_msg(msg.chat_id_,msgs)
+        end
+        if text:match("[Tt][Ee][Ll][Ee][Gg][Rr][Aa][Mm].[Mm][Ee]") or text:match("[Tt][Ll][Gg][Rr][Mm].[Mm][Ee]") or text:match("[Tt].[Mm][Ee]") then
+          if database:get('bot:links:mute'..result.chat_id_) then
+            local msgs = {[0] = data.message_id_}
+            delete_msg(msg.chat_id_,msgs)
+          end
+        end
+        if text:match("[Hh][Tt][Tt][Pp][Ss]://") or text:match("[Hh][Tt][Tt][Pp]://") or text:match(".[Ii][Rr]") or text:match(".[Cc][Oo][Mm]") or text:match(".[Oo][Rr][Gg]") or text:match(".[Ii][Nn][Ff][Oo]") or text:match("[Ww][Ww][Ww].") or text:match(".[Tt][Kk]") or text:match("/") then
+          if database:get('bot:webpage:mute'..result.chat_id_) then
+            local msgs = {[0] = data.message_id_}
+            delete_msg(msg.chat_id_,msgs)
+          end
+        end
+        if text:match("@") then
+          if database:get('tags:lock'..result.chat_id_) then
+            local msgs = {[0] = data.message_id_}
+            delete_msg(msg.chat_id_,msgs)
+          end
+        end
+        if text:match("#") then
+          if database:get('bot:hashtag:mute'..result.chat_id_) then
+            local msgs = {[0] = data.message_id_}
+            delete_msg(msg.chat_id_,msgs)
+          end
+        end
+        if text:match("[\216-\219][\128-\191]") then
+          if database:get('bot:arabic:mute'..result.chat_id_) then
+            local msgs = {[0] = data.message_id_}
+            delete_msg(msg.chat_id_,msgs)
+          end
+        end
+        if text:match("[A-Z]") or text:match("[a-z]") then
+          if database:get('bot:english:mute'..result.chat_id_) then
+            local msgs = {[0] = data.message_id_}
+            delete_msg(msg.chat_id_,msgs)
+          end
+        end
+      end
+    end
+    getMessage(msg.chat_id_, msg.message_id_,get_msg_contact)
+    -----------------------------------------------------------------------------------------------
+  elseif (data.ID == "UpdateOption" and data.name_ == "my_id") then
+    tdcli_function ({ID="GetChats", offset_order_="9223372036854775807", offset_chat_id_=0, limit_=20}, dl_cb, nil)
+  end
+  -----------------------------------------------------------------------------------------------
+end
+-- END VERSION 3.5
